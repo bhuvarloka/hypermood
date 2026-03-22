@@ -1,9 +1,7 @@
-import { GoogleGenAI } from '@google/genai'
+import { ai } from './parse-utils'
 
 export const EMBEDDING_MODEL = 'gemini-embedding-2-preview'
 export const EMBEDDING_MODEL_VERSION = EMBEDDING_MODEL
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
 
 export async function embedImage(buffer: Buffer): Promise<number[]> {
   const mimeType = detectMimeType(buffer)
@@ -39,7 +37,11 @@ export async function embedText(text: string): Promise<number[]> {
 
 function detectMimeType(buffer: Buffer): string {
   if (buffer[0] === 0x89 && buffer[1] === 0x50) return 'image/png'
-  if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg'
-  if (buffer[0] === 0x52 && buffer[1] === 0x49) return 'image/webp'
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8) return 'image/jpeg'
+  if (
+    buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+    buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
+  ) return 'image/webp'
+  if (buffer[0] === 0x47 && buffer[1] === 0x49) return 'image/gif'
   return 'image/jpeg'
 }

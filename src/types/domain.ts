@@ -1,4 +1,5 @@
 import type { Json, Tables } from '@/lib/supabase/types'
+import type { QueryPlan } from '@/lib/gemini/query'
 
 export type Roll = Tables<'rolls'>
 
@@ -40,6 +41,9 @@ export type GalleryWithImages = Gallery & {
 
 export type ChatMessageWithResults = ChatMessage & {
   result_images?: Image[]
+  // interpreted_filter is Json | null in the DB layer; this enriched type narrows
+  // it so UI components can consume the filter structure without unsafe casts.
+  interpreted_filter: QueryPlan | null
 }
 
 // -- Base Layer Metadata (Vision Indexing Schema) --

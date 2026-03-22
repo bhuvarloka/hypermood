@@ -21,8 +21,11 @@ export const indexImage = inngest.createFunction(
     retries: 3,
     triggers: [{ event: 'indexing/process.image' }],
     onFailure: async ({ event }) => {
-      const { imageId } = event.data.event.data as { imageId: string }
+      const { imageId } = event.data.event.data as { imageId?: string }
       const errorMessage = event.data.error.message ?? 'Unknown error'
+      // Guard against a missing or invalid imageId — without this, an undefined
+      // id would match all rows and mark every image as failed.
+      if (!imageId) return
       const supabase = createAdminClient()
       const update: TablesUpdate<'images'> = { status: 'failed', error_message: errorMessage }
       await supabase
@@ -80,7 +83,7 @@ export const indexImage = inngest.createFunction(
           image_id: imageId,
           user_id: image.user_id,
           metadata: metadata as unknown as Json,
-        }, { onConflict: 'image_id' })
+        } as never, { onConflict: 'image_id' })
 
       if (error) throw new Error(`Failed to save metadata: ${error.message}`)
     })
@@ -98,7 +101,7 @@ export const indexImage = inngest.createFunction(
           user_id: image.user_id,
           embedding,
           embedding_model_version: EMBEDDING_MODEL_VERSION,
-        }, { onConflict: 'image_id' })
+        } as never, { onConflict: 'image_id' })
 
       if (error) throw new Error(`Failed to save embedding: ${error.message}`)
     })

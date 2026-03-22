@@ -1,4 +1,5 @@
-import { GoogleGenAI, ThinkingLevel } from '@google/genai'
+import { ThinkingLevel } from '@google/genai'
+import { ai, tryParseJson, asRecord } from './parse-utils'
 import type {
   BaseLayerMetadata,
   DetectedObject,
@@ -21,8 +22,6 @@ import type {
 } from '@/types/domain'
 
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? 'gemini-3.1-flash-lite-preview'
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
 
 // -- Prompt --
 
@@ -150,32 +149,6 @@ const VALID_POSITIONS: readonly Position[] = [
   'top-left', 'top-right', 'bottom-left', 'bottom-right',
 ]
 
-function tryParseJson(raw: string): unknown | null {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    // Attempt repair: trim first, then strip markdown fences, trailing commas, control chars
-    const cleaned = raw
-      .trim()
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```\s*$/, '')
-      .replace(/,\s*([}\]])/g, '$1')
-      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
-      .trim()
-
-    try {
-      return JSON.parse(cleaned)
-    } catch {
-      return null
-    }
-  }
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null
-    ? (value as Record<string, unknown>)
-    : null
-}
 
 function clamp(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback

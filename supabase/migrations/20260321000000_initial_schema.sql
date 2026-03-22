@@ -98,6 +98,9 @@ CREATE INDEX chat_messages_roll_id_created_at_idx ON chat_messages (roll_id, cre
 
 CREATE UNIQUE INDEX galleries_user_id_slug_idx ON galleries (user_id, slug);
 
+-- Supports the JOIN in search_images_by_embedding_filtered (FK columns are not auto-indexed).
+CREATE INDEX idx_image_metadata_image_id ON image_metadata (image_id);
+
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
@@ -120,6 +123,20 @@ CREATE POLICY "images: owner access"
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+-- Allow unauthenticated users to read images belonging to public galleries.
+-- Required for the nested join in getPublicGallery to return image rows.
+CREATE POLICY "images: public select via gallery"
+  ON images FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM gallery_images gi
+      JOIN galleries g ON g.id = gi.gallery_id
+      WHERE gi.image_id = images.id
+        AND g.is_public = true
+    )
+  );
+
 CREATE POLICY "image_metadata: owner access"
   ON image_metadata FOR ALL
   USING (user_id = auth.uid())
@@ -140,12 +157,12 @@ CREATE POLICY "galleries: owner access"
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
--- galleries: public select for is_public galleries (no auth required)
+-- Public select for galleries marked is_public (no auth required).
 CREATE POLICY "galleries: public select"
   ON galleries FOR SELECT
   USING (is_public = true);
 
--- gallery_images: owner access (via gallery ownership)
+-- gallery_images: owner access via gallery ownership check.
 CREATE POLICY "gallery_images: owner access"
   ON gallery_images FOR ALL
   USING (
@@ -163,7 +180,7 @@ CREATE POLICY "gallery_images: owner access"
     )
   );
 
--- gallery_images: public select for images in public galleries
+-- Public select for gallery_images belonging to public galleries.
 CREATE POLICY "gallery_images: public select"
   ON gallery_images FOR SELECT
   USING (
@@ -173,3 +190,68 @@ CREATE POLICY "gallery_images: public select"
         AND g.is_public = true
     )
   );
+
+-- ============================================================
+-- RPC FUNCTIONS
+-- ============================================================
+
+-- Vector similarity search for images within a roll (no metadata filters).
+-- Returns image_id + similarity score ordered by nearest neighbor (cosine).
+CREATE OR REPLACE FUNCTION search_images_by_embedding(
+  p_roll_id   uuid,
+  p_embedding vector(3072),
+  p_limit     int DEFAULT 100
+)
+RETURNS TABLE (image_id uuid, similarity float)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    ie.image_id,
+    1 - (ie.embedding <=> p_embedding) AS similarity
+  FROM image_embeddings ie
+  JOIN images i ON i.id = ie.image_id
+  WHERE i.roll_id = p_roll_id
+    AND i.user_id = auth.uid()
+    AND i.status = 'indexed'
+  ORDER BY ie.embedding <=> p_embedding
+  LIMIT p_limit;
+$$;
+
+-- Vector similarity search combined with JSONB metadata filters.
+-- p_where_clause is a SQL fragment built server-side from the ALLOWED_METADATA_FIELDS
+-- allowlist in query-executor.ts — field names are never taken from raw user input.
+CREATE OR REPLACE FUNCTION search_images_by_embedding_filtered(
+  p_roll_id      uuid,
+  p_embedding    vector(3072),
+  p_where_clause text,
+  p_limit        int DEFAULT 100
+)
+RETURNS TABLE (image_id uuid, similarity float)
+LANGUAGE plpgsql
+STABLE
+AS $$
+BEGIN
+  RETURN QUERY EXECUTE format(
+    $q$
+      SELECT
+        ie.image_id,
+        1 - (ie.embedding <=> %L::vector) AS similarity
+      FROM image_embeddings ie
+      JOIN images i ON i.id = ie.image_id
+      JOIN image_metadata im ON im.image_id = ie.image_id
+      WHERE i.roll_id = %L
+        AND i.user_id = auth.uid()
+        AND i.status = 'indexed'
+        AND (%s)
+      ORDER BY ie.embedding <=> %L::vector
+      LIMIT %s
+    $q$,
+    p_embedding,
+    p_roll_id,
+    p_where_clause,
+    p_embedding,
+    p_limit::int
+  );
+END;
+$$;

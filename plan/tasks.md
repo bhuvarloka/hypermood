@@ -178,7 +178,7 @@ Parse and validate the response. Handle edge cases: query that's just a greeting
 5. Exclude the reference images from results
 6. Return ranked results
 
-**Output:** Function: `searchByImageReferences(imageIds: string[], textQuery?: string, rollId: string) → Promise<Image[]>`
+**Output:** Function: `searchByImageReferences(imageIds: string[], rollId: string, textQuery?: string) → Promise<Image[]>`
 
 ### Task 15 — Chat Server Action
 
