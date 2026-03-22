@@ -67,6 +67,18 @@ Each should return a JSON response. If you get `"error"` with a model not found 
   INNGEST_SIGNING_KEY=local
   ```
 
+- **SDK v4 gotcha:** `INNGEST_SIGNING_KEY=local` alone is not enough — SDK v4 will still report `mode: cloud` and the dev server will reject the sync with "Expected server kind cloud, got dev". You must pass `isDev` to the Inngest client:
+
+  ```ts
+  // src/lib/inngest/client.ts
+  export const inngest = new Inngest({
+    id: 'your-app-id',
+    isDev: process.env.NODE_ENV !== 'production',
+  })
+  ```
+
+  This is safe for production — `NODE_ENV=production` sets `isDev: false` automatically, which enables cloud mode and uses your real signing key.
+
 - **For production only:** go to the Inngest dashboard → **Settings → API Keys**
   - Copy the **Event Key** (starts with `evt_...`)
   - Copy the **Signing Key** (starts with `signkey-...`)

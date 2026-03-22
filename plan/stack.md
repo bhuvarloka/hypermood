@@ -44,7 +44,7 @@
 
 - Currently in preview (launched March 3, 2026). Model string may change when it goes GA — keep it in an env var.
 - Supports text, image, video, audio, PDF input. 1M token context window, 64K output.
-- Supports thinking levels (minimal/low/medium/high). For indexing, use `minimal` to keep costs and latency low.
+- Supports thinking levels (minimal/low/medium/high). For indexing, use `low` — slightly more reasoning than `minimal` (Flash-Lite's default), produces more reliable structured JSON extraction.
 - Predecessor `gemini-2.0-flash-lite` is being retired June 1, 2026. Do not use it.
 
 **Gemini `gemini-3-flash-preview` (query):**

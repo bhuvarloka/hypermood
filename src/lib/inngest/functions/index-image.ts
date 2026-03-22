@@ -1,1 +1,117 @@
-export {}
+import { inngest } from '../client'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getImageUrl } from '@/lib/imagekit/url'
+import { analyzeImage } from '@/lib/gemini/vision'
+import { embedImage, EMBEDDING_MODEL_VERSION } from '@/lib/gemini/embedding'
+import type { Json, TablesUpdate } from '@/lib/supabase/types'
+
+type ImageRow = {
+  id: string
+  roll_id: string
+  user_id: string
+  storage_key: string
+  original_filename: string
+  status: string
+}
+
+export const indexImage = inngest.createFunction(
+  {
+    id: 'index-image',
+    concurrency: { limit: 5 },
+    retries: 3,
+    triggers: [{ event: 'indexing/process.image' }],
+    onFailure: async ({ event }) => {
+      const { imageId } = event.data.event.data as { imageId: string }
+      const errorMessage = event.data.error.message ?? 'Unknown error'
+      const supabase = createAdminClient()
+      const update: TablesUpdate<'images'> = { status: 'failed', error_message: errorMessage }
+      await supabase
+        .from('images')
+        .update(update as never)
+        .eq('id', imageId)
+    },
+  },
+  async ({ event, step }) => {
+    const { imageId } = event.data as { imageId: string }
+
+    const image = await step.run('fetch-image', async () => {
+      const supabase = createAdminClient()
+      const { data, error } = await supabase
+        .from('images')
+        .select('id, roll_id, user_id, storage_key, original_filename, status')
+        .eq('id', imageId)
+        .single()
+
+      if (error) throw new Error(`Failed to fetch image ${imageId}: ${error.message}`)
+      return data as ImageRow
+    })
+
+    await step.run('set-status-indexing', async () => {
+      const supabase = createAdminClient()
+      const { error } = await supabase
+        .from('images')
+        .update({ status: 'indexing' } as TablesUpdate<'images'> as never)
+        .eq('id', imageId)
+      if (error) throw new Error(`Failed to update status: ${error.message}`)
+    })
+
+    const imageBuffer = await step.run('download-image', async () => {
+      const url = getImageUrl(image.storage_key)
+      const response = await fetch(url)
+      if (!response.ok) throw new Error(`Failed to download image: ${response.status}`)
+      const arrayBuffer = await response.arrayBuffer()
+      // Serialize as base64 so Inngest can persist step output
+      return Buffer.from(arrayBuffer).toString('base64')
+    })
+
+    const buffer = Buffer.from(imageBuffer, 'base64')
+
+    const metadata = await step.run('analyze-image', async () => {
+      const result = await analyzeImage(buffer)
+      if (!result) throw new Error('Vision analysis returned null')
+      return result
+    })
+
+    await step.run('save-metadata', async () => {
+      const supabase = createAdminClient()
+      const { error } = await supabase
+        .from('image_metadata')
+        .upsert({
+          image_id: imageId,
+          user_id: image.user_id,
+          metadata: metadata as unknown as Json,
+        }, { onConflict: 'image_id' })
+
+      if (error) throw new Error(`Failed to save metadata: ${error.message}`)
+    })
+
+    const embedding = await step.run('embed-image', async () => {
+      return await embedImage(buffer)
+    })
+
+    await step.run('save-embedding', async () => {
+      const supabase = createAdminClient()
+      const { error } = await supabase
+        .from('image_embeddings')
+        .upsert({
+          image_id: imageId,
+          user_id: image.user_id,
+          embedding,
+          embedding_model_version: EMBEDDING_MODEL_VERSION,
+        }, { onConflict: 'image_id' })
+
+      if (error) throw new Error(`Failed to save embedding: ${error.message}`)
+    })
+
+    await step.run('set-status-indexed', async () => {
+      const supabase = createAdminClient()
+      const { error } = await supabase
+        .from('images')
+        .update({ status: 'indexed' } as TablesUpdate<'images'> as never)
+        .eq('id', imageId)
+      if (error) throw new Error(`Failed to update status: ${error.message}`)
+    })
+
+    return { imageId, status: 'indexed' }
+  },
+)

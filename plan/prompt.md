@@ -16,6 +16,8 @@ Sent alongside the image as `inline_data` (base64).
 Analyze this image and return a JSON object with exactly this structure. Every field is required. If a field does not apply, use the specified default.
 
 {
+  "subject": "One noun phrase stating what this image is fundamentally about — e.g., 'portrait of a young woman in a garden', 'product shot of a white sneaker', 'aerial view of a coastline at sunset', 'UI mockup of a mobile dashboard'",
+
   "objects": [
     {
       "label": "string — what the object is",
@@ -38,6 +40,10 @@ Analyze this image and return a JSON object with exactly this structure. Every f
       }
     ]
   },
+
+  "relationships": [
+    "Natural language descriptions of spatial and contextual relationships between key elements. One string per relationship. e.g., 'woman standing next to a red car', 'cat sitting on person's lap', 'text overlaid on sunset background', 'child holding adult's hand', 'laptop placed on wooden desk near window'. 3-8 relationships for complex scenes, 1-2 for simple ones. Empty array only if the image contains a single isolated element."
+  ],
 
   "colors": {
     "dominant": ["top 3-5 hex codes from the image — e.g., '#2B4A7C', '#F5E6D3'"],
@@ -74,6 +80,10 @@ Analyze this image and return a JSON object with exactly this structure. Every f
     "orientation": "'landscape' | 'portrait' | 'square'"
   },
 
+  "quality_score": 0.0,
+
+  "texture_material": ["dominant textures and materials visible — e.g., 'concrete', 'glass', 'silk', 'wood grain', 'skin', 'brushed metal', 'paper', 'leather', 'water/reflective', 'digital/flat'. Empty array if not notable."],
+
   "text_content": {
     "has_text": false,
     "text_strings": ["all readable text found, as individual strings"],
@@ -89,6 +99,7 @@ RULES:
 - Be literal and specific. "A person wearing a blue denim jacket" not "someone in casual wear."
 - For colors, extract actual hex values from what you see.
 - blur_score: 0.0 = tack sharp, 1.0 = unusable. Most decent photos are 0.1-0.3.
+- quality_score: holistic judgment of image quality considering sharpness, exposure, composition, noise, and whether the shot appears intentional vs accidental. 0.0 = accidental/unusable, 0.5 = average, 1.0 = professional quality.
 - Objects: 3-10 meaningful, searchable items.
 - People: one entry per visible person, max 6. If more than 6, describe the most prominent and set the total in count.
 - Tags: lowercase, singular when possible ('cat' not 'cats').
@@ -102,7 +113,7 @@ RULES:
 ```typescript
 {
   responseMimeType: 'application/json',
-  thinkingConfig: { thinkingLevel: 'MINIMAL' },
+  thinkingConfig: { thinkingLevel: 'LOW' },
   temperature: 0.1,
 }
 ```
