@@ -94,6 +94,23 @@ Each roll has a persistent chat. Messages stored in Supabase:
 
 Chat history is sent to the LLM on each query (with a sliding window to respect context limits).
 
+## Suggestion Generation
+
+Two types of suggestions power the conversational UX:
+
+**Roll suggestions (generated once, after indexing):**
+After a roll finishes indexing (or after a significant batch completes), a lightweight server-side computation scans the indexed metadata to produce 3-4 contextual starter suggestions. This is NOT an LLM call — it's a SQL aggregation:
+- Count images by `scene.setting` (indoor/outdoor split)
+- Count images by `people.count` (portraits vs groups vs no-people)
+- Extract top 5 most common tags
+- Check quality_score distribution (any high-quality cluster?)
+- Check time_of_day distribution
+
+From these stats, generate natural-language starters. Store them on the `rolls` table (a `suggestions` JSONB column, nullable). Regenerate on re-index.
+
+**Follow-up suggestions (generated per query):**
+The query interpreter prompt (Gemini Flash) is extended to return `suggested_followups: string[]` (2-3 items) alongside the query plan. These are contextual to the current result set and reference what just happened. Stored as part of the assistant message in `chat_messages.content` (or a separate field if preferred).
+
 ---
 
 ## ADRs (Architecture Decision Records)

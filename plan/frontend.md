@@ -105,28 +105,28 @@ fontFamily: {
 
 **Scale — use what the moment needs:**
 
-| Class                      | When                                    |
-| -------------------------- | --------------------------------------- |
-| `text-5xl font-bold`       | Login screen title, hero empty states   |
-| `text-3xl font-semibold`   | Roll name as page header, gallery title |
-| `text-xl font-semibold`    | Section headings, panel titles          |
-| `text-base font-medium`    | Important labels, active nav items      |
-| `text-sm`                  | Body, chat messages, descriptions       |
-| `text-xs text-primary-400` | Timestamps, counts, subtle metadata     |
-| `text-xs font-mono`        | Tags, scores, dimensions, file sizes    |
+| Class                                | When                                    |
+| ------------------------------------ | --------------------------------------- |
+| `text-5xl font-bold`                 | Login screen title, hero empty states   |
+| `text-4xl font-semibold`             | Roll name as page header, gallery title |
+| `text-2l font-semibold`              | Section headings, panel titles          |
+| `text-base font-medium`              | Important labels, active nav items      |
+| `text-xl`                            | Body, chat messages, descriptions       |
+| `text-sm font-mono text-primary-500` | Timestamps, counts, subtle metadata     |
+| `text-sm font-mono`                  | Tags, scores, dimensions, file sizes    |
 
 No ceiling. Typography serves hierarchy, not uniformity.
 
 ### Spacing & Layout
 
-Base unit: 4px (Tailwind default). Page padding: `px-6` (content area, right of sidebar). Max content width: `max-w-screen-2xl`. Image grids use CSS Grid with `auto-fill` + `minmax()`.
+Base unit: 4px (Tailwind default). Page padding: `px-4 lg:px-8` (content area, right of sidebar). Image grids use CSS Grid with `auto-fill` + `minmax()`. Use smartly white space.
 
 ### Navigation Pattern
 
 **Sidebar rail** — always visible on the left edge. Two states:
 
-- **Collapsed (default):** `w-14`, icon-only, `bg-primary-950` (dark rail on white page — the one persistent dark element, echoing login). Icons in `text-primary-300`, active icon highlighted with `bg-primary-800 text-white rounded-lg`. Logo mark at top. User avatar at bottom.
-- **Expanded (on hover or toggle):** `w-56`, reveals text labels next to icons. Same dark background. Smooth width transition `duration-200`.
+- **Collapsed (default):** `w-16`, icon-only, `bg-primary-` (dark rail on white page — the one persistent dark element, echoing login). Icons in `text-primary-300`, active icon highlighted with `bg-primary-800 text-white rounded-lg`. Logo mark at top. User avatar at bottom.
+- **Expanded (on hover or toggle):** `w-80`, reveals text labels next to icons. Same dark background. Smooth width transition `duration-200`.
 
 This pattern comes from the sidebar reference (image 4). The dark rail creates a strong left anchor and frames the white content area. Navigation items: Dashboard, Upload, Galleries, Settings.
 

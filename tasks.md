@@ -4,7 +4,7 @@ Each task is one focused AI prompt. No task depends on anything below it. Read t
 
 ---
 
-## Phase 1: Foundation ✅
+## Phase 1: Foundation
 
 ### Task 1 — Project scaffold
 
@@ -67,7 +67,7 @@ Create `src/types/domain.ts` with application-level types that map to DB rows (R
 
 ---
 
-## Phase 2: Storage + Indexing Pipeline ✅
+## Phase 2: Storage + Indexing Pipeline
 
 ### Task 5 — ImageKit upload utility
 
@@ -133,7 +133,7 @@ Create `actions/rolls.ts` with `createRoll` and `listRolls` Server Actions.
 
 ---
 
-## Phase 3: Query Engine ✅
+## Phase 3: Query Engine
 
 ### Task 12 — Query interpreter (NL → filter)
 
@@ -180,7 +180,7 @@ Parse and validate the response. Handle edge cases: query that's just a greeting
 
 **Output:** Function: `searchByImageReferences(imageIds: string[], rollId: string, textQuery?: string) → Promise<Image[]>`
 
-### Task 15 — Chat Server Action ✅
+### Task 15 — Chat Server Action
 
 **Do:** Create `actions/chat.ts` with a `sendMessage` Server Action:
 
@@ -197,7 +197,7 @@ Create `getChatHistory` action to load paginated chat for a roll.
 
 ---
 
-## Phase 4: Galleries ✅
+## Phase 4: Galleries
 
 ### Task 16 — Gallery CRUD
 
@@ -218,7 +218,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 ## Phase 5: Frontend
 
-> **Read `plan/frontend.md` before starting any task in this phase.** It contains the full design system (colors, typography, spacing, motion), screen specifications, selection flow, dimming behavior, preview panel, suggestions, stream of thought, actionable filters, and public gallery layout modes.
+> **Read `plan/frontend.md` before starting any task in this phase.** It contains the full design system (colors, typography, spacing, motion), screen specifications, selection flow, dimming behavior, preview panel, and public gallery layout modes.
 
 ### Task 17 — App layout shell + The Rail
 
@@ -239,150 +239,65 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 **⚠️ Complexity flag:** Realtime subscription for progress tracking needs careful cleanup on unmount. Batch UI updates to avoid re-rendering per image.
 **Output:** Frictionless upload + progress within the roll view.
 
-### Task 20 — The Command Center (chat + grid + selection + dimming)
+### Task 20 — Roll detail view (The Command Center)
 
 **Read:** `plan/frontend.md` §The Command Center
-**Do:** Build `/rolls/[rollId]` page — the core of the app. Two symbiotic entities in a vertical stack: the Chat (engine, top) and the Grid (output, bottom).
+**Do:** Build `/rolls/[rollId]` page — the core of the app. Vertical stack layout: chat above, image grid below.
 
-**The Chat (top):**
+**Chat (top):**
+- Persistent chat history (load via `getChatHistory`). Clean, large typography (`text-lg`).
+- Input box: centered, `rounded-2xl`, prominent at top of the view, drives the grid below.
+- **Selection strip** inside the chat input area: when images are selected in the grid, small square thumbnails (`w-5 h-5`) appear above the text input, scrollable horizontally, each with × to deselect on hover. Strip uses `.animate-bloom` on appear. Count displayed beneath thumbnails: `"16 selected"` in `text-base font-mono`. Strip is invisible when no images are selected.
+- Sends messages via `sendMessage` Server Action. Each assistant response shows image count and interpreted filter (collapsed by default, toggleable).
 
-- The input box is the hero element — a single, centered, punctually-rounded (`rounded-2xl`) field resting prominently at the top of the page. It drives everything below. This is not a sidebar or a secondary panel — it is the primary interface.
-- Chat history flows above the input (or collapses upward). Clean, large typography — `text-lg` minimum, never smaller. Messages: user messages and assistant responses in a simple top-to-bottom conversational flow.
-- Sends messages via `sendMessage` Server Action. Each assistant response that returned results shows the image count and the interpreted filter (collapsed by default, toggleable).
-- **Selection strip:** The moment the first image is selected in the grid, a strip appears *inside* the chat input area, directly above the text field, using `.animate-bloom`. The strip contains:
-  - Small square thumbnails of selected images (`w-5 h-5`, `rounded-none`, sharp edges matching the grid aesthetic), scrollable horizontally. Each thumbnail has a small × to deselect on hover.
-  - A count line directly beneath the thumbnails, above the text input: `"16 selected"` in `text-base font-mono`.
-  - When no images are selected, the strip is completely invisible. The input returns to its default state.
+**Grid (bottom):**
+- Fluid masonry layout beneath chat. Images edge-to-edge within cells, `gap-1`.
+- **Click** any image = toggle selection (no mode switch needed). Selected images show `ring-2 ring-semantic-info ring-offset-2`.
+- **Hover** any image = reveal Fullscreen icon overlay (opens Image Detail). Zero layout shift.
+- Images loaded via ImageKit URLs with thumbnail transforms.
 
-**The Grid (bottom):**
+**Grid state after query results:**
+- Result images: `opacity-100`.
+- Reference images (user's selections): keep selection ring at full opacity.
+- All other images: dim to `opacity-15`. No reflow, no disappearing images. Grid stays stable.
+- Result count near chat: `"50 results from 1,000"` in `text-base font-mono`.
+- Refine with follow-up messages. Clear via "show all" in chat or ghost reset button near count.
 
-- Fluid masonry layout flowing strictly beneath the chat. Images are edge-to-edge relative to their cells, `gap-1`. Loaded via ImageKit URLs with thumbnail transforms.
-- **Click** any image = toggle selection. No mode switch, no button, no menu. Selection is always available. Selected images show `ring-2 ring-semantic-info ring-offset-2`.
-- **Hover** any image = reveal contextual tools (Fullscreen icon to open Image Detail) as small overlaid icons with `.animate-bloom`. Zero layout shift.
+**Preview panel (slide-up):**
+- A panel rises from bottom of viewport (~60% height) when user clicks "Preview selection" button (appears near result count once results exist).
+- Shows result images in tight masonry grid (3-4 columns, small thumbnails) for narrative judgment.
+- Header: count (`"50 images"` in `text-xl font-medium`) + "Save as Gallery" button.
+- Save flow: clicking "Save as Gallery" reveals inline fields — gallery name, layout selector, visibility toggle. Submit creates gallery, panel closes, confirmation appears in chat.
+- Dismiss: click backdrop, Escape, or drag down. Grid underneath unchanged.
+- Panel uses `.animate-bloom` timing. Backdrop: `bg-primary-950/40`.
 
-**Querying + grid response:**
+**⚠️ Complexity flag:** This is the most complex UI surface. Build in sub-steps: (1) chat panel with input, (2) static image grid, (3) wire chat → grid results, (4) selection + selection strip, (5) dimming behavior, (6) preview panel with save flow.
+**Output:** Core app experience works — chat, grid, selection, dimming, preview, gallery creation.
 
-- User types a text prompt alongside selections (e.g., "find 50 more with this same vibe") and sends. Both references and text submit together to the image-as-prompt pipeline.
-- The grid responds with three-tier opacity:
-  - **Result images:** Full `opacity-100`.
-  - **Reference images (user's selections):** Keep `ring-2 ring-semantic-info` at full opacity — visually distinct as "input."
-  - **All other images:** Dim to `opacity-15`. Ghosts — present for spatial memory, but the eye skips them. No reflow. No disappearing. No layout shift.
-- **Result count** appears near the chat: `"50 results from 1,000"` in `text-base font-mono`.
-- The user can refine with follow-up messages ("narrow to 20", "exclude the ones with people"). The grid updates — some bright images dim, others emerge. The conversation builds on itself, each refinement sharpening the selection.
-- **Clearing:** Typing "show all" in chat, or a small ghost-style reset button near the result count, restores all images to `opacity-100` and clears all selections. Full roll restored.
+### Task 21 — Gallery creation (integrated in preview panel)
 
-**⚠️ Complexity flag:** This is the most complex UI surface. Build in sub-steps:
+**Do:** The save-as-gallery flow is built into the preview panel from Task 20. This task ensures the full flow works end-to-end:
+1. User has query results displayed in the grid (dimmed non-results).
+2. User opens preview panel → sees curated set.
+3. Clicks "Save as Gallery" → inline fields appear: gallery name input, layout selector (masonry/timeline/grid), visibility toggle (public/private).
+4. Submit calls `createGallery` Server Action with current result image IDs.
+5. Panel closes. Confirmation appears in chat: `"Gallery saved → /g/[slug]"` with clickable link.
+6. Gallery is accessible from the Gallery Manager and (if public) via the public URL.
 
-1. Chat input as hero element + basic message send/receive
-2. Static image grid with masonry layout
-3. Wire chat → grid (query results update the grid)
-4. Click-to-select + selection strip in chat input with count
-5. Three-tier dimming behavior on query results
+**Output:** Gallery creation flows naturally from the selection/preview experience.
 
-**Output:** Core app experience works — chat drives grid, frictionless selection, dimming preserves spatial memory.
-
-### Task 21 — Preview panel + gallery creation
-
-**Read:** `plan/frontend.md` §Preview Panel (The Narrative Check)
-**Do:** Build the slide-up preview panel and integrate gallery creation into it.
-
-**Preview panel:**
-- A panel rises from the bottom of the viewport (~60% height). The main grid stays behind it, visible through the backdrop (`bg-primary-950/40`).
-- **Trigger:** A "Preview selection" ghost button appears near the result count once results exist. Also accessible via keyboard shortcut (`Space` when images are selected).
-- **Content:** Result images displayed in a tight masonry grid (3-4 columns, small thumbnails). Clean, dense, narrative-focused — this is where the user judges whether the set tells a story. Images populate with a subtle stagger animation.
-- **Header inside panel:** Count (`"50 images"` in `text-xl font-medium`) + "Save as Gallery" button (`bg-primary-900 text-white rounded-xl`).
-- **Dismiss:** Click backdrop above panel, press Escape, or drag panel down. Grid underneath is exactly where the user left it — no reflow, no state change.
-- **Animation:** Panel slides up with `.animate-bloom` timing (150ms ease-out).
-
-**Save-as-gallery flow (inside panel):**
-1. Clicking "Save as Gallery" reveals inline fields — gallery name input, layout selector (masonry/timeline/grid), visibility toggle (public/private).
-2. Submit calls `createGallery` Server Action with current result image IDs.
-3. Panel closes. Confirmation appears in the chat: `"Gallery saved → /g/[slug]"` with clickable link.
-4. Gallery is accessible from the Gallery Manager and (if public) via the public URL.
-
-**Output:** Preview panel for narrative judgment + gallery creation flows naturally from the curation experience.
-
-### Task 22 — Stream of thought (processing indicator)
-
-**Read:** `plan/frontend.md` §Stream of Thought
-**Do:** When a query is processing, show a temporary assistant message in the chat with mono-font processing lines that appear sequentially.
-
-1. Create a `ProcessingIndicator` component. Renders `text-base font-mono text-primary-200` lines.
-2. Lines appear one by one with `.animate-bloom` and staggered delay (100ms between lines):
-   - Text query: `Interpreting query...` → `Searching N images...` → `Found M matches`
-   - Image-as-prompt: `Computing visual similarity...` → `Blending with text prompt...` → `Found M matches`
-3. The processing message occupies the same position the real response will take. When results arrive, processing fades out and the real response blooms in — no layout shift.
-4. Wire into the `sendMessage` flow: show processing immediately on send, replace when response arrives.
-
-**Output:** User always knows the system is working. Feels precise, not generic.
-
-### Task 23 — Roll suggestions backend
-
-**Do:** Backend support for contextual starter suggestions on each roll.
-
-1. Run migration: `ALTER TABLE rolls ADD COLUMN suggestions jsonb;`
-2. Create a `generateRollSuggestions` utility in `lib/suggestions.ts` that runs SQL aggregations on `image_metadata` for a roll: count by `scene.setting`, `people.count` ranges, top tags, `quality_score` distribution, `time_of_day` spread. From these stats, generate 3-4 natural-language starter suggestions. This is template-based, not an LLM call.
-3. Create an Inngest function `generate-roll-suggestions` triggered by `indexing/complete.roll` event (fire this event at the end of `index-roll` fan-out when all images are indexed). Writes suggestions to `rolls.suggestions`.
-4. On re-index, regenerate suggestions.
-
-**Output:** Every indexed roll has contextual starter suggestions stored in the DB.
-
-### Task 24 — Suggestions + follow-ups frontend
-
-**Read:** `plan/frontend.md` §Suggestions, §Follow-up suggestions
-**Do:** Two UI features that make the chat feel like a collaborator.
-
-**Initial suggestions:**
-- When no conversation exists, render suggestions from `rolls.suggestions` as ghost-style pill chips beneath the chat input (`rounded-xl`, `text-base`, `border border-primary-200`, `hover:bg-primary-100`), laid out horizontally, centered. Clicking auto-sends the suggestion as a message.
-- Before indexing completes (or if `suggestions` is null), show static universal starters: `"Show me the best shots"`, `"Find all portraits"`, `"What's in this roll?"`.
-
-**Follow-up suggestions:**
-1. Extend the query interpreter prompt in `lib/gemini/query.ts` — add to the system prompt: "Also return `suggested_followups`: an array of 2-3 short natural-language follow-up queries the user might want to try next, based on the current result set. Reference specific aspects of the results."
-2. Parse `suggested_followups` from the LLM response alongside the query plan.
-3. Return follow-ups as part of the `sendMessage` response. Store in the existing `interpreted_filter` JSONB as an additional `followups` key.
-4. Render follow-up chips beneath each assistant message that has results. Same pill styling as initial suggestions. Clicking sends as next message.
-
-**Output:** Chat never feels cold. User always has a next step.
-
-### Task 25 — Actionable interpreted filters
-
-**Read:** `plan/frontend.md` §Actionable Interpreted Filters
-**Do:** Transform the collapsed interpreted filter from a diagnostic readout into a direct manipulation tool.
-
-1. Parse `interpreted_filter` JSONB from the assistant message into individual filter conditions.
-2. Render each condition as an editable chip: `text-base font-mono`, `bg-primary-100 rounded-lg px-3 py-1`. Examples: `scene: outdoor`, `blur_score < 0.3`, `tags: portrait`.
-3. Each chip has a × button on hover. Clicking × removes that filter and re-runs the query automatically.
-4. A small `+` button at the end of the chip row opens an inline input for adding a filter condition manually.
-5. Grid updates live as filters are added/removed — same dimming behavior as a new chat query.
-6. Create a `rerunWithModifiedFilters` function in `actions/chat.ts` that takes an existing `QueryPlan`, applies modifications, and calls `executeQuery` directly (bypassing the NL interpreter).
-
-**Output:** Users can start with natural language and fine-tune with direct manipulation.
-
-### Task 26 — Image Detail (The Darkroom)
-
-**Read:** `plan/frontend.md` §Image Detail
-**Do:** Build the full-screen image detail overlay.
-
-- Full-screen overlay. Background is pure black (`primary-950`) or pure white, isolating the image completely.
-- Image commands maximum viewport space, maintaining exact aspect ratio.
-- Hidden UI: hover near edges to reveal next/prev arrows, hover bottom to summon technical details (mono font typography showing dimensions, index data, tags, quality score).
-- Arrow key navigation through current result set. Escape to close. Click backdrop to close.
-
-**Output:** Immersive single-image view with hidden metadata.
-
-### Task 27 — Gallery management
+### Task 22 — Gallery management
 
 **Read:** `plan/frontend.md`
 **Do:** Gallery management is surfaced via a full-height drawer from the right (or via natural language in chat: "show my galleries"). The drawer lists user's galleries: name, image count, public/private badge, link to public URL if public. Click into a gallery within the drawer to see its images with reorder (drag and drop) and remove capabilities. Edit name, layout, visibility. If a dedicated `/galleries` route is needed for direct navigation, it can exist as a simple page that opens the same drawer.
 **Output:** Full gallery management.
 
-### Task 28 — Public gallery page
+### Task 23 — Public gallery page
 
 **Read:** `plan/frontend.md` §Public Gallery
 **Do:** Build `/g/[slug]` page (no auth required, no Rail). Fetches gallery via `getPublicGallery`. Minimalist top bar: logo (top-left), gallery name `text-xl font-medium` (center), view mode toggle icons (top-right, if owner enabled multiple layouts).
 
 **View modes:**
-
 - **Masonry:** Fluid columns, vertical scroll. Native aspect ratios, `gap-1`.
 - **Timeline:** On large screens, a horizontal scroll track — images side-by-side, aligned on central X-axis, each max `w-1/4` of viewport, native aspect ratios. On mobile, folds to a single-column vertical stack.
 - **Mobile (all modes):** Full-width single-column stack.
@@ -395,62 +310,24 @@ Images served via ImageKit with responsive transforms and srcset. If gallery not
 
 ## Phase 6: Polish
 
-### Task 29 — Error handling + edge cases
+### Task 24 — Error handling + edge cases
 
 **Do:** Audit all Server Actions and Inngest functions for error handling:
 
 - Upload fails mid-batch (partial success: images already uploaded are kept, user notified of failures)
 - Gemini rate limit hit (Inngest retry with backoff)
 - Embedding call fails (image marked failed, can be retried)
-- Chat query returns zero results (assistant says so, suggests broadening query via follow-up suggestions)
-- Empty roll (chat explains no images to search, shows upload prompt)
+- Chat query returns zero results (assistant says so, suggests broadening query)
+- Empty roll (chat explains no images to search)
 - Image deleted while gallery references it (handle gracefully in gallery view)
-**Output:** No unhandled error states.
+  **Output:** No unhandled error states.
 
-### Task 30 — Indexing status + retry mechanism
+### Task 25 — Indexing status + retry mechanism
 
-**Do:** On the roll detail page, show indexing status summary (X indexed, Y pending, Z failed) in `text-base font-mono` near the chat. For failed images, provide a "Retry" button that re-sends `indexing/process.image` events for failed images. Update status back to `pending` on retry.
+**Do:** On the roll detail page, show indexing status summary (X indexed, Y pending, Z failed). For failed images, provide a "Retry" button that re-sends `indexing/process.image` events for failed images. Update status back to `pending` on retry.
 **Output:** Users can recover from indexing failures.
 
-### Task 31 — Performance optimization
+### Task 26 — Performance optimization
 
 **Do:** Add thumbnail transforms to all grid/masonry views (e.g., w-400, q-80). Add pagination or infinite scroll to image grids (don't load 1000 images at once). Add `loading.tsx` skeletons for roll and gallery pages. Ensure vector search uses the HNSW index (verify with `EXPLAIN ANALYZE`).
 **Output:** App feels fast at 1000-image scale.
-
----
-
-## Phase 7: Future Features (post-MVP)
-
-### Task 32 — Narrative curation mode
-
-**Concept:** Instead of "find images matching X," the user says "create a sad story from my images" or "build a joyful narrative using my outdoor shots." The system doesn't just retrieve — it curates and sequences images into a coherent visual narrative with an emotional arc.
-
-**Architecture fit:** This is a text-only LLM call on stored metadata — no vision calls at query time. Fully compatible with ADR-005.
-
-**Implementation:**
-
-1. **Query interpreter extension:** Add `mode: 'search' | 'narrative'` and `narrative_mood: string | null` to the `QueryPlan` type. The query interpreter detects narrative intent from messages like "create a story," "build a narrative," "arrange these into a sequence" and sets `mode: 'narrative'` with the extracted mood.
-
-2. **Candidate retrieval:** Same as current search — use filters + semantic search to build a candidate pool (50-100 images). If the user provides reference images or explicit filters ("a sad narrative from my outdoor shots"), apply those to narrow the pool. If no filters, use the full roll.
-
-3. **Narrative sequencing (new LLM call):** Send the candidates' metadata (descriptions, moods, tags, quality scores, composition) to Gemini Flash with a narrative prompt:
-   ```
-   You are a photo editor creating a visual narrative. From these candidate images,
-   select 15-25 and order them to tell a [MOOD] story.
-   
-   Consider: emotional arc (opening, build, climax, resolution), visual flow
-   (color progression, compositional variety, scale shifts), and pacing
-   (don't cluster similar images together).
-   
-   Return a JSON array:
-   [{ "image_id": "...", "position": 1, "reason": "Opens with a quiet, solitary scene" }]
-   ```
-   This is one Gemini Flash call reading ~50-80 descriptions. Cost: ~$0.001.
-
-4. **Response format:** The assistant message includes the narrative reasoning. Each image in the result set has a `position` and `reason`. The grid displays images in narrative order (not similarity rank). The preview panel becomes especially important here — it shows the sequence as a story.
-
-5. **Gallery save:** When saving a narrative as a gallery, the ordering is preserved in `gallery_images.position`. The public gallery's timeline view becomes the natural display mode for narratives.
-
-**No schema changes required.** The existing `QueryPlan`, `chat_messages`, `gallery_images.position`, and public gallery timeline layout all support this without modification. The only new code is: (a) narrative intent detection in the query interpreter, (b) a new `curateNarrative()` function in `lib/gemini/`, (c) routing in the chat action to call it when `mode === 'narrative'`.
-
-**Output:** Users can create sequenced visual stories from their image collections through natural language.
