@@ -14,15 +14,17 @@ An AI coding agent (Claude Code). Each file in `plan/` is self-contained for its
 
 | File                   | Contains                                                  | Read when...                                  |
 | ---------------------- | --------------------------------------------------------- | --------------------------------------------- |
-| `plan/architecture.md` | Data flow, three-phase pipeline, ADRs, embedding strategy | Starting any backend work                     |
-| `plan/stack.md`        | Tech stack with versions and gotchas                      | Setting up the project or adding a dependency |
-| `plan/structure.md`    | Folder layout, naming conventions, anti-patterns          | Creating any new file                         |
-| `plan/glossary.md`     | Domain vocabulary definitions                             | Any term is ambiguous                         |
-| `plan/setup.md`        | Manual pre-coding steps (DB, APIs, env vars, RLS)         | Before writing any code                       |
-| `plan/tasks.md`        | Numbered implementation steps, dependency-ordered         | Picking the next thing to build               |
-| `plan/testing.md`      | What to test, what to skip, how to run                    | Writing or running tests                      |
-| `plan/frontend.md`     | UI design specs, layouts, components                      | Building any UI (placeholder until defined)   |
-| `plan/dev.md`          | Run, build, lint commands                                 | Local development                             |
+| `CONTEXT.md`           | Full project overview, current state, key decisions       | Starting a new chat session                   |
+| `architecture.md`      | Data flow, pipeline, ADRs, suggestion generation          | Starting any backend work                     |
+| `stack.md`             | Tech stack with versions and gotchas                      | Setting up the project or adding a dependency |
+| `structure.md`         | Folder layout, naming conventions, anti-patterns          | Creating any new file                         |
+| `glossary.md`          | Domain vocabulary definitions                             | Any term is ambiguous                         |
+| `setup.md`             | Manual pre-coding steps (DB, APIs, env vars, RLS)         | Before writing any code                       |
+| `tasks.md`             | Numbered tasks (1–31 + future). 1–16 complete.            | Picking the next thing to build               |
+| `testing.md`           | What to test, what to skip, how to run                    | Writing or running tests                      |
+| `frontend-v2.md`       | Full design system, all screens, selection flow, UX patterns | Building any UI                            |
+| `prompt.md`            | Vision indexing prompt (system + user + config)            | Working on indexing or metadata extraction     |
+| `dev.md`               | Run, build, lint commands                                 | Local development                             |
 
 ## Golden Workflow — Build Order
 
@@ -45,9 +47,11 @@ An AI coding agent (Claude Code). Each file in `plan/` is self-contained for its
 6. Galleries   → Save filter results, public pages, layout options
                   WHY SIXTH: Output layer. Requires query to produce results first.
 
-7. Frontend    → Upload UI, chat interface, gallery views, progress indicators
+7. Frontend    → App shell (Rail), Command Center (chat + grid), selection flow,
+                  dimming, preview panel, suggestions, stream of thought,
+                  actionable filters, Image Detail, galleries, public gallery.
                   WHY LAST: Every UI component calls something built in steps 2-6.
-                  Read plan/frontend.md before starting this phase.
+                  Read frontend-v2.md before starting this phase.
 ```
 
 **Why this order protects you:**
