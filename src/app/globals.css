@@ -1,1 +1,109 @@
 @import "tailwindcss";
+
+/* ─--- Fonts ----*/
+
+@font-face {
+  font-family: "Dyatype Sans";
+  src:
+    url("/fonts/Diatype-Regular.woff2") format("woff2"),
+    url("/fonts/Diatype-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Dyatype Sans";
+  src:
+    url("/fonts/Diatype-Medium.woff2") format("woff2"),
+    url("/fonts/Diatype-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Dyatype Sans";
+  src:
+    url("/fonts/Diatype-Bold.woff2") format("woff2"),
+    url("/fonts/Diatype-Bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neue Montreal Mono";
+  src:
+    url("/fonts/NeueMontrealMono-Book.woff2") format("woff2"),
+    url("/fonts/NeueMontrealMono-Book.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neue Montreal Mono";
+  src:
+    url("/fonts/NeueMontrealMono-Medium.woff2") format("woff2"),
+    url("/fonts/NeueMontrealMono-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Design tokens ─────────────────────────────────────────── */
+
+@theme {
+  --color-primary-DEFAULT: #18181a;
+  --color-primary-50: #fafafa;
+  --color-primary-100: #f4f4f5;
+  --color-primary-200: #e4e4e7;
+  --color-primary-800: #27272a;
+  --color-primary-900: #18181a;
+  --color-primary-950: #09090b;
+
+  --color-neutral-DEFAULT: #ffffff;
+
+  --color-semantic-info: #3b82f6;
+  --color-semantic-success: #10b981;
+  --color-semantic-alert: #ef4444;
+
+  --font-sans: "Dyatype Sans", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "Neue Montreal Mono", ui-monospace, "Cascadia Code", monospace;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  background-color: #ffffff;
+  color: #18181a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Animations ────────────────────────────────────────────── */
+
+/* .animate-bloom — for generative UI appearing in the chat, hover reveals */
+@keyframes bloom {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-bloom {
+  animation: bloom 150ms ease-out both;
+}
+
+/* .animate-swiss — standard hover micro-interactions */
+.animate-swiss {
+  transition: all 200ms ease-out;
+}

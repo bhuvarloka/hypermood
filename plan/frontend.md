@@ -1,247 +1,241 @@
-# Hypermood — Frontend Specification
+# Hypermood — Frontend Specification (v2)
 
 ## Design Philosophy
 
-The images are the interface. Everything else disappears.
+The photography and the chat are kings. Everything else disappears.
 
-White canvas. The UI is structure, not decoration — borders, type, and whitespace do all the work so the user's images carry every ounce of visual weight. Think cosmos.so's density, Emele Collab's numbered grid clarity, Are.na's search-over-content overlay pattern. Photography-native. Invisible UI.
+A pristine canvas anchored by Swiss design principles and warm, subtle tones. The UI is generally invisible—a hidden structure waiting to be summoned. It balances the intuitive, conversational simplicity of Gemini and Claude with the stark, editorial clarity of Antigravity. It is emphatically *not* a conventional 2020 SaaS dashboard.
 
-One exception: the login screen is fully dark (`primary-950`) — a single, deliberate inversion that marks the threshold into the app.
+One single exception: the login screen is a void—fully dark—a deliberate threshold marking entry into the system.
 
 ---
 
 ## Design System (Tailwind CSS)
 
-Hand-built components only. No shadcn/ui, no Radix, no Headless UI. Tailwind utilities throughout. Custom CSS only for masonry layout, custom scrollbars, and complex animations.
+Hand-built components only. Tailwind utilities throughout. Custom CSS strictly reserved for complex masonry layouts and tailored micro-animations.
 
-### Colors
+### Colors: Warmth & Restraint
 
-Four scales derived from the project's design system. Each scale is a full spectrum — use the shades, not just the DEFAULT.
+Colors are an exercise in restraint. The core palette shifts from harsh, pure grays to a subtly warm, elegant grayscale (akin to warm zinc). Semantic colors are allowed but must be incredibly punctual, used strictly when communication requires it (e.g., success, error, or selection).
 
 ```ts
-// tailwind.config.ts — extend colors
+// tailwind.config.ts — warm minimalism
 colors: {
   primary: {
-    DEFAULT: '#000000',
-    50:  '#F7F7F7',
-    100: '#E3E3E3',
-    200: '#C8C8C8',
-    300: '#A4A4A4',
-    400: '#818181',
-    500: '#666666',
-    600: '#515151',
-    700: '#434343',
-    800: '#383838',
-    900: '#1A1A1A',
-    950: '#000000',
-  },
-  secondary: {
-    DEFAULT: '#007AFF',
-    50:  '#EBF5FF',
-    100: '#D6EBFF',
-    200: '#ADD6FF',
-    300: '#85C2FF',
-    400: '#5CADFF',
-    500: '#007AFF',
-    600: '#0062CC',
-    700: '#004A99',
-    800: '#003166',
-    900: '#001933',
-  },
-  tertiary: {
-    DEFAULT: '#00FF94',
-    50:  '#EDFFF7',
-    100: '#D6FFED',
-    200: '#ADFFDB',
-    300: '#85FFC9',
-    400: '#5CFFB7',
-    500: '#00FF94',
-    600: '#00CC76',
-    700: '#009959',
-    800: '#00663B',
-    900: '#00331E',
+    DEFAULT: '#18181A', // Zinc-900
+    50:  '#FAFAFA', // Zinc-50
+    100: '#F4F4F5',
+    200: '#E4E4E7',
+    800: '#27272A',
+    900: '#18181A',
+    950: '#09090B', // Login void
   },
   neutral: {
-    DEFAULT: '#F8F9FA',
-    50:  '#FDFDFE',
-    100: '#F8F9FA',
-    200: '#F0F1F3',
-    300: '#DEE0E3',
-    400: '#BEC2C8',
-    500: '#9EA3AB',
-    600: '#6C727F',
-    700: '#4A4F59',
-    800: '#2E3238',
-    900: '#1A1D21',
+    DEFAULT: '#FFFFFF', // Canvas
   },
-  status: {
-    success: '#16A34A',
-    error:   '#DC2626',
-    warning: '#CA8A04',
-    info:    '#007AFF',
-  },
+  semantic: {
+    info: '#3B82F6',    // Punctual blue for selections/links
+    success: '#10B981', // Elegant green for indexing completion
+    alert: '#EF4444',   // For destructive actions
+  }
 }
 ```
 
-**How to use shades — not just defaults:**
-
-- **Primary scale** is the workhorse. `primary-950` for headings and primary buttons. `primary-700` for secondary text emphasis. `primary-400` for disabled/muted text. `primary-100` for subtle dividers. `primary-50` for hover backgrounds on white surfaces. The whole range is in play.
-- **Secondary (blue)** signals interactivity and selection. `secondary-500` for active states, selected image rings, links. `secondary-50` as a tinted background for selected/active items (e.g. a selected chat filter chip). `secondary-100` for hover on blue-tinted elements. `secondary-700` for text-on-light when blue needs to pass contrast. Never use blue decoratively — it always means "this is interactive" or "this is selected."
-- **Tertiary (green)** is the rarest color. `tertiary-500` only for success/complete indicators — an indexed badge, a "live" gallery dot. `tertiary-50` as a background tint for success states. `tertiary-700` for text-on-light success messages. Never more than one or two green elements visible on any screen.
-- **Neutral** handles surfaces. `neutral-50` for page-level background (or pure white). `neutral-100` for card backgrounds and input fills. `neutral-200` for borders and dividers. `neutral-300` for stronger dividers (panel splits). `neutral-500` for placeholder text. `neutral-600`–`neutral-700` for secondary body text.
-- **Status** colors appear only inside badges and inline indicators. They don't bleed into backgrounds, borders, or buttons. Exception: `status-error` can tint a destructive button on hover.
+**How to use shades intelligently:**
+- **The Canvas:** Overwhelmingly, text is warm black (`primary-900`) on a pure white (`neutral-DEFAULT`) or warm off-white (`primary-50`) canvas.
+- **No Muted Text:** We establish hierarchy through typographic size and weight natively, not by diluting the text color to gray. 
+- **States & Hover:** Shades like `primary-100` are used intelligently for button hover states. Semantic colors appear purely as transient states (a success badge, an active selection ring) and never as overarching backgrounds.
 
 ### Typography
 
-**Font:** `"Instrument Sans"` — weights 400, 500, 600, 700. Single family throughout.
-**Mono:** `"JetBrains Mono"` 400 — metadata values, tag chips, technical readouts.
+Swiss design dictates our typographic rhythm: precision, legibility, and confidence. An absolute rejection of tiny, legibility-straining body copy.
+
+**Fonts:**
+- **Sans:** `"Dyatype Sans"` — highly careful use of sizes.
+- **Mono:** `"Neue Montreal Mono"` — technical readouts: timestamps, counts, scores, tags etc.
 
 ```ts
 fontFamily: {
-  sans: ['"Instrument Sans"', 'system-ui', 'sans-serif'],
-  mono: ['"JetBrains Mono"', 'monospace'],
+  sans: ['"Dyatype Sans"', 'Helvetica Neue', 'system-ui', 'sans-serif'],
+  mono: ['"Neue Montreal Mono"', 'monospace'],
 }
 ```
 
-**Scale — use what the moment needs:**
-
+**Scale — no extreme variations, just punctual shifts:**
 | Class                                | When                                    |
 | ------------------------------------ | --------------------------------------- |
-| `text-5xl font-bold`                 | Login screen title, hero empty states   |
-| `text-4xl font-semibold`             | Roll name as page header, gallery title |
-| `text-2l font-semibold`              | Section headings, panel titles          |
-| `text-base font-medium`              | Important labels, active nav items      |
-| `text-xl`                            | Body, chat messages, descriptions       |
-| `text-sm font-mono text-primary-500` | Timestamps, counts, subtle metadata     |
-| `text-sm font-mono`                  | Tags, scores, dimensions, file sizes    |
-
-No ceiling. Typography serves hierarchy, not uniformity.
+| `text-5xl tracking-tight`            | Login screen hero title                 |
+| `text-3xl font-medium`               | Roll names, definitive headers          |
+| `text-xl font-medium`                | Section headings, panel titles          |
+| `text-lg`                            | Body copy, chat messages. *Never smaller.* |
+| `text-base font-medium`              | Button labels, active elements          |
+| `text-base font-mono`                | Timestamps, metadata, technical labels  |
 
 ### Spacing & Layout
 
-Base unit: 4px (Tailwind default). Page padding: `px-4 lg:px-8` (content area, right of sidebar). Image grids use CSS Grid with `auto-fill` + `minmax()`. Use smartly white space.
-
-### Navigation Pattern
-
-**Sidebar rail** — always visible on the left edge. Two states:
-
-- **Collapsed (default):** `w-16`, icon-only, `bg-primary-` (dark rail on white page — the one persistent dark element, echoing login). Icons in `text-primary-300`, active icon highlighted with `bg-primary-800 text-white rounded-lg`. Logo mark at top. User avatar at bottom.
-- **Expanded (on hover or toggle):** `w-80`, reveals text labels next to icons. Same dark background. Smooth width transition `duration-200`.
-
-This pattern comes from the sidebar reference (image 4). The dark rail creates a strong left anchor and frames the white content area. Navigation items: Dashboard, Upload, Galleries, Settings.
+Content needs air to breathe. Generous negative space acts as the invisible framework holding the app together. Page padding feels expansive. Grids are fluid but strictly aligned.
 
 ### Surfaces & Borders
 
-- Borders: `border border-neutral-200`. Thin, barely there.
-- Images: `rounded-none` always. Sharp corners, no exceptions.
-- UI elements (buttons, inputs, chips): `rounded-md`.
-- Cards/panels: `rounded-lg` max. Panels that sit flush to edges get no radius on the flush side.
-- No box shadows anywhere. Depth through background color shift only: white → `neutral-50` → `neutral-100`.
+**Sharp edges with punctual softness.**
+- **Default:** `rounded-none`. The app is sharp. Images and layout panels have crisp, hard edges echoing physical photography prints.
+- **Punctual Curves:** `rounded-xl` or `rounded-2xl` are selectively applied to floating UI components generated *within* the chat, or the chat input box itself. These fluid elements stand out gently against the sharp photographic grid.
+- **Depth:** No drop shadows. Depth is achieved via pure background shifts (e.g., pure white over `primary-50`).
 
-### Interactive States
+### Motion & Animation
 
-**Buttons:**
-
-- Primary: `bg-primary-950 text-white hover:bg-primary-800 active:bg-primary-700`
-- Secondary: `bg-neutral-200 text-primary-900 hover:bg-neutral-300`
-- Ghost: `text-primary-500 hover:bg-primary-50 hover:text-primary-900`
-- Accent: `bg-secondary-500 text-white hover:bg-secondary-600` — reserved for the single most important action per screen
-
-**Inputs:** `bg-neutral-100 border-neutral-200 focus:bg-white focus:border-primary-950 focus:ring-1 focus:ring-primary-950`
-**Image selection:** `ring-2 ring-secondary-500 ring-offset-2`
-**Image hover:** `opacity-90 transition-opacity duration-150`
-**All transitions:** `duration-150 ease-out`. No spring, no bounce.
-
-### Icons
-
-Lucide React. 16px inline, 20px standalone. Stroke width 1.5. Outline only, never filled.
+Animations must feel intentional, magical, and highly punctual. They never exist just to occupy time or add unnecessary flair.
+- **Custom Utility Classes:** To keep the codebase clean and physics consistent, define custom classes in your `globals.css` instead of dumping utility strings everywhere:
+  - `.animate-bloom`: For generative UI elements appearing in the chat (fast `opacity-0 scale-95` to `opacity-100 scale-100` transition over `150ms ease-out`).
+  - `.animate-swiss`: For standard hover state micro-interactions (`transition-all duration-200 ease-out`).
+- **Engineered Easing:** Avoid bouncy, rubber-band physics. Motion should feel Swiss—engineered, exacting, and razor-sharp.
+- **Micro-interactions:** Applied strictly to moments of discovery (like the rail's micro-preview fading in) or state changes (button hovers). Everything else is instant.
 
 ---
 
-## Screens
+## Architecture & Screens
 
-### 1. Dashboard (`/`)
+### 1. The Rail (Not a Menu, A Portal)
 
-Content area right of sidebar. No separate top bar — the sidebar handles navigation.
+Taking cues from Gemini, the sidebar is not a traditional dashboard menu—it is your direct access to Rolls.
+- **Behavior:** It sits silently on the left.
+- **Hover Reveal:** When hovering over a Roll name in the rail, a micro-preview pops up: 4 mini-mini thumbnails (a 2x2 grid) showing a glimpse of the roll before you click.
+- **Aesthetic:** Unobtrusive, flush with the canvas. Typography is `text-lg`.
 
-**Stats:** three numbers in a row — total rolls, total images, total indexed. Large type (`text-3xl font-semibold`), small labels beneath (`text-xs text-primary-400`). No cards around them, just numbers and air.
+### 2. The Command Center (Chat Above Grid)
 
-**Rolls list:** each roll is a card showing a 2×2 or 1×4 thumbnail mosaic (like cosmos.so collection cards), roll name, image count, indexing progress as text ("847 / 1,000"). Cards laid out in a responsive grid (`auto-fill`, `minmax(280px, 1fr)`, `gap-4`). Thumbnail mosaics use `gap-0.5`, images `rounded-none`. Card itself: `bg-neutral-50 rounded-lg p-3`. Roll name below thumbnails.
+This is the core of the engine. The Chat and the Grid are two distinct entities that work symbiotically in a vertical stack on the roll view screen.
 
-**Empty state:** centered, generous whitespace. `text-4xl font-bold text-primary-300` message. Upload CTA as accent button.
+**The Chat (The Engine, Top):**
+- A dedicated conversational interface that lives directly *above* the grid of images.
+- Clean, large typography (`text-lg`).
+- The input box is a single, centered, punctually-rounded (`rounded-2xl`) element resting prominently at the top, driving the grid below.
 
-### 2. Roll View (`/rolls/[id]`)
+#### Suggestions (Solving the Blank Canvas)
 
-Two-panel split, full viewport height (minus nothing — sidebar is vertical, not a top bar).
+The chat input must never feel cold. Contextual suggestions guide the user into their first interaction and keep the conversation flowing after each result.
 
-**Left — Chat panel:** `w-[400px]`, `border-r border-neutral-200`, `bg-white`. Scroll for message history. User messages: `bg-primary-900 text-white rounded-lg px-3 py-2 text-sm`, right-aligned. System messages: `bg-neutral-100 text-primary-800 rounded-lg px-3 py-2 text-sm`, left-aligned. Sticky input at bottom: `bg-neutral-100 rounded-lg` with no visible border, send icon right. Above input: reference image strip (small 40×40 thumbnails with × to deselect) — hidden when empty.
+**Initial suggestions (empty chat, no query yet):**
+- 3-4 suggestion chips appear beneath the chat input when no conversation exists. Displayed as ghost-style pills (`rounded-xl`, `text-base`, `border border-primary-200`, `hover:bg-primary-100`), laid out horizontally, centered beneath the input.
+- **After indexing completes:** suggestions are *generated from the actual roll metadata*. The system scans the indexed metadata (top tags, scene types, people count distribution, quality range) and produces contextual starters. Examples: `"Show me all outdoor golden hour shots"`, `"Find the group photos"`, `"Best quality images"`. This is a lightweight server-side computation on metadata stats, not an LLM call.
+- **Before indexing completes (or for very small rolls):** static universal suggestions: `"Show me the best shots"`, `"Find all portraits"`, `"What's in this roll?"`.
+- Clicking a suggestion pre-fills the chat input and auto-sends it.
 
-**Right — Image grid:** fluid width. Top strip: roll name (`text-xl font-semibold`), count ("47 of 1,000" in `text-sm text-primary-400`), select mode toggle (ghost button). Grid: `auto-fill`, `minmax(180px, 1fr)`, `gap-1`. Images `object-cover` in fixed-height cells (~200px). In select mode, click toggles `ring-2 ring-secondary-500 ring-offset-2`. Indexing progress: `h-0.5 bg-secondary-500` bar at very top, only visible during processing.
+**Follow-up suggestions (after each query result):**
+- After every assistant response that returns results, 2-3 follow-up suggestion chips appear beneath the response in the chat. Same pill styling.
+- Follow-ups are contextual to the current result set. Generated by the query interpreter (Gemini Flash) as part of its response — the system prompt asks for `suggested_followups: string[]` alongside the query plan.
+- Examples based on context: `"Narrow to close-ups only"`, `"Exclude blurry ones"`, `"Show only warm tones"`, `"Save as gallery"`.
+- Follow-ups reference what just happened — they are not generic. If the result set is mostly outdoor scenes, a follow-up might be `"Split by time of day"`. If many results have people, it might be `"Without people"`.
+- Clicking a follow-up sends it as the next message. The conversation continues.
 
-Grid fades content on query update: container `opacity-0 → opacity-100` over `duration-200`.
+#### Stream of Thought (Processing Indicator)
 
-### 3. Upload (`/upload` or modal from Dashboard)
+When a query is processing, the chat shows a subtle, mono-font processing sequence that reveals what the system is doing — not a spinner, not a progress bar.
 
-Centered, `max-w-xl`, white card on `neutral-50` page background.
+- Appears as a temporary assistant message in `text-base font-mono text-primary-200`.
+- Lines appear one by one with `.animate-bloom`:
+  - `Interpreting query...`
+  - `Searching 1,000 images...`
+  - `Found 47 matches`
+- Once results are ready, the processing message is replaced by the real assistant response. The transition is instant — processing lines fade, real response blooms in.
+- For image-as-prompt queries: `Computing visual similarity...` → `Blending with text prompt...` → `Found 50 matches`.
+- Keeps the user informed without interrupting the Swiss-minimal aesthetic. Feels like watching a terminal — purposeful, precise.
 
-Roll selector: dropdown or inline "New roll" with name input. Drop zone: `border-2 border-dashed border-neutral-300 rounded-lg`, icon + text. Hover state: `border-secondary-400 bg-secondary-50`.
+#### Actionable Interpreted Filters
 
-After file selection: vertical list per image — small thumbnail, filename, status chip. Status uses shade-aware colors: pending = `bg-neutral-100 text-primary-400`, processing = `bg-yellow-50 text-yellow-700`, indexed = `bg-tertiary-50 text-tertiary-700`, failed = `bg-red-50 text-red-700`. Overall progress: fraction text (`text-sm font-mono`), no animated bar.
+The interpreted filter (collapsed by default on each assistant response) is not just diagnostic — it's a direct manipulation tool.
 
-### 4. Image Detail (modal overlay)
+- When expanded, the filter renders as a row of editable chips. Each chip represents one filter condition (e.g., `scene: outdoor`, `blur_score < 0.3`, `tags: portrait`).
+- **Click × on a chip** → removes that filter → query re-runs automatically → grid updates.
+- **Click + to add a filter** → opens a small inline input where the user can type a new condition (or pick from metadata fields). The system re-runs the query with the added filter.
+- This lets users start with natural language ("outdoor portraits, no blurry ones") and then surgically fine-tune with direct manipulation — remove `outdoor` to see indoor portraits too, or add `composition: close-up`.
+- Chips use `text-base font-mono`, `bg-primary-100 rounded-lg px-3 py-1`, × button on hover.
 
-Backdrop: `bg-black/80`. Image centered, max viewport size, original aspect ratio preserved.
+**The Grid (The Output, Bottom):**
+- Fluid masonry layout flowing strictly beneath the chat interface. Images are edge-to-edge relative to their cells. `gap-1`.
+- **Click** on any image toggles its selection state — no mode switch, no button to enter "select mode." Selection is always available.
+- **Hover** on any image reveals contextual tools (Fullscreen icon to open Image Detail) with zero layout shift. These tools appear as small overlaid icons with `.animate-bloom`.
 
-Right panel `w-[360px]`, `bg-white`, slides from right (`translate-x → 0` over `duration-200`). Contains:
+#### Image-as-Prompt Selection Flow
 
-- Filename, dimensions, file size — `text-xs font-mono text-primary-400`.
-- Tags: inline chips, `bg-neutral-100 text-primary-700 text-xs font-mono px-2 py-1 rounded-md`. Editable — × to remove, input to add.
-- Dominant colors: row of `w-4 h-4 rounded-full` swatches.
-- Description: `text-sm text-primary-600`.
-- Quality score: `text-xs font-mono`.
+Selection is the gateway to the most powerful feature in the app. It must be frictionless — one gesture, no modes, no menus.
 
-Arrow key navigation through current result set. Escape or backdrop click to close. Panel collapsible to go full-bleed image.
+**Selecting:**
+- Clicking an image in the grid toggles selection. Selected images receive `ring-2 ring-semantic-info ring-offset-2`. Click again to deselect.
+- A **selection strip** appears inside the chat input area, directly above the text field, the moment the first image is selected. It uses `.animate-bloom` on appear. The strip contains:
+  - Small square thumbnails of selected images (`w-5 h-5`, `rounded-none`), scrollable horizontally if many are selected. Each thumbnail has a small × to deselect on hover.
+  - A count line directly beneath the thumbnails, above the text input: `"16 selected"` in `text-base font-mono`.
+- When no images are selected, the strip is invisible. The chat input looks exactly as it always does.
 
-### 5. Gallery Manager (`/galleries`)
+**Querying:**
+- The user types a text prompt alongside the selections (e.g., "find 50 more with this same vibe") and sends. Both the selected image references and the text are submitted together to the image-as-prompt pipeline.
+- The system returns results. The grid responds:
 
-Responsive grid of gallery cards, same layout rhythm as Dashboard roll cards. Each card: thumbnail mosaic, gallery name, image count, public/private badge (`bg-tertiary-50 text-tertiary-700` for public, `bg-neutral-100 text-primary-400` for private), source roll name.
+**Grid State After Results:**
+- **Result images:** Full `opacity-100`. These are the matches.
+- **Reference images (the user's selections):** Keep their `ring-2 ring-semantic-info` selection ring at full opacity. They remain visually distinct as "input."
+- **All other images:** Dim to `opacity-15`. They become ghosts — present for spatial memory, but the eye skips over them entirely. The grid does not reflow. No images disappear. No layout shift.
+- **Result count** appears near the chat as `"50 results from 1,000"` in `text-base font-mono`.
+- The user can refine with another chat message ("narrow to 20", "exclude the ones with people"). The grid updates — some previously bright images dim, or vice versa. The conversation builds on itself.
+- **Clearing:** Typing "show all" in chat, or a small ghost-style reset button near the result count, restores all images to `opacity-100` and clears selections. Back to the full roll.
 
-Edit view (expanded inline or as a sub-page): drag-and-drop image reorder, name/description editing, layout toggles (masonry on/off, timeline on/off), visibility toggle, copy-public-URL button. Delete with confirmation modal.
+#### Preview Panel (The Narrative Check)
+
+After a selection or query result exists, the user needs a way to see the curated set as a cohesive narrative — without losing spatial context in the main grid.
+
+**Slide-up panel:**
+- A panel rises from the bottom of the viewport, covering roughly the lower 60% of the screen. The main grid stays behind it, dimmed by the panel's subtle backdrop (`bg-primary-950/40`).
+- **Trigger:** A small "Preview selection" ghost button appears near the result count once results exist. Alternatively, a keyboard shortcut (e.g., `Space` when images are selected).
+- **Content:** The selected/result images displayed in a tight masonry grid (3-4 columns, small thumbnails). Clean, dense, narrative-focused — this is where the user judges whether the set tells a story.
+- **Header inside the panel:** The count (`"50 images"` in `text-xl font-medium`), and a "Save as Gallery" button (`bg-primary-900 text-white rounded-xl`).
+- **Save flow:** Clicking "Save as Gallery" reveals inline fields within the panel — gallery name input, layout toggles (masonry/timeline), visibility toggle (public/private). Submit creates the gallery. The panel closes. A confirmation appears in the chat: "Gallery saved → [link]".
+- **Dismiss:** Click the backdrop above the panel, press Escape, or drag the panel down. The grid underneath is exactly where the user left it — no reflow, no state change.
+- **Animation:** The panel slides up with `.animate-bloom` timing (150ms ease-out). Images inside populate with a subtle stagger.
+
+### 3. Upload (Ambient & Frictionless)
+
+No dedicated page. 
+- For V1 simplicity, dragging files over a generous area of the page (e.g., the **Image Grid** or **Chat UI**) triggers the upload state, rather than hijacking the entire viewport. A crisp overlaid typography reads: "Drop to index."
+- Progress is indicated by a simple, monospaced readout (`Uploading & Indexing 14 of 42...`), allowing the user to immediately start chatting with already-indexed images while background processors (Inngest) handle the rest.
+
+### 4. Image Detail (The Darkroom)
+
+When a specific image demands focus:
+- A full-screen overlay. The background is either pure black (`primary-950`) or pure white, isolating the image completely.
+- The image commands maximum viewport space, maintaining its exact aspect ratio.
+- Hidden UI: hover near the edges to reveal next/prev arrows, or hover the bottom to summon technical details (mono font typography showing dimensions and index data).
+
+### 5. Settings / Manager (Magical UI or Modal)
+
+Settings and gallery management are ideally surfaced via natural language (e.g., "Show my settings card"). If a permanent home is needed, it opens in a stark, full-height drawer from the right, relying purely on grid alignment instead of boxed cards.
 
 ### 6. Public Gallery (`/g/[slug]`)
 
-No sidebar, no app chrome. Pure content.
-
-Gallery title: `text-3xl font-semibold`, left-aligned, generous top padding. Optional description: `text-base text-primary-500`. Layout switcher (if both enabled): simple text toggle — "Masonry / Timeline" in `text-xs font-medium`, separated by `/`, active one in `text-primary-950`, inactive in `text-primary-300`.
-
-**Masonry:** 3 cols desktop, 2 tablet, 1 mobile. `gap-1`. Images `rounded-none`, variable height, native aspect ratio.
-**Timeline:** single column, `max-w-3xl` centered, images full-width, `gap-6`. Date labels between images if temporal data exists (`text-xs font-mono text-primary-300`).
-
-Lazy loading via Intersection Observer. ImageKit responsive transforms with srcset. Footer: "Hypermood" in `text-xs text-primary-200`, bottom of page. **This is the only responsive screen (375px+).**
+Pure, uninterrupted content for external viewers. No sidebar, no chat engine.
+- **Top Bar (Minimalist Header):** 
+  - **Top Left:** Small, sharp logo.
+  - **Top Center:** Gallery name (`text-xl font-medium`).
+  - **Top Right:** View mode toggle icons (if the owner enabled multiple layouts).
+- **View Modes:**
+  - **Masonry:** A regular masonry layout (fluid columns, vertical scroll). Images maintain native aspect ratios and gap-16. 
+  - **Mobile:** Folds into a natural vertical scroll (`flex flex-col`). Images snap to a full-width 1-column stack.
+  - **Timeline:** A responsive timeline layout:
+    - **Large Screens:** A horizontal scroll track (`flex flex-row overflow-x-auto items-center`). Images sit side-by-side, perfectly aligned on their central X-axis. Each image has a maximum width equivalent to exactly one column of a 4-column grid (`lg:w-1/4`), preserving their original aspect ratios.
+    - **Mobile:** Folds into a natural vertical scroll (`flex flex-col`). Images snap to a full-width 1-column stack.
+    - Gaps between images across all breakpoints are strictly fixed to `0.5rem` (`gap-1 md:gap-2`).
+- **Flawless Transitions:** When possible, the switch between Masonry and Timeline modes must be incredibly smooth and animated (e.g., using Framer Motion or the View Transitions API) to gracefully reflow images from a vertical grid into a horizontal sequence without jarring layout jumps.
 
 ### 7. Login (`/login`)
 
-**The dark screen.** Full viewport, `bg-primary-950`.
-
-"Hypermood" in `text-5xl font-bold text-white`, centered. Beneath: email input (`bg-primary-900 border-primary-800 text-white placeholder:text-primary-500`) and "Send magic link" button (`bg-secondary-500 text-white hover:bg-secondary-600`). Max width `max-w-sm`, vertically centered.
-
-Post-submit: swap form for "Check your email" in `text-lg text-primary-300`. Nothing else on the page. No illustrations, no taglines.
-
----
-
-## Image Delivery (ImageKit)
-
-```
-Thumbnail:  ?tr=w-400,h-440,fo-auto,q-80,f-auto
-Detail:     ?tr=w-1200,q-90,f-auto
-Gallery:    ?tr=w-800,q-85,f-auto  (srcset: 400w, 800w, 1200w)
-Tiny:       ?tr=w-80,h-80,fo-auto,q-70,f-auto
-```
-
-Store canonical keys in DB (`hypermood/rolls/{id}/{filename}`), resolve URLs at render via `getImageUrl()`.
+**The Dark Void.**
+- Full viewport, warm black (`primary-950`).
+- "Hypermood" in `text-5xl text-white`.
+- A single input. A single action. Absolute silence.
 
 ---
 
-## Accessibility
+## Technical Considerations
 
-Keyboard nav on all interactives. `focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2`. Image alt from indexed descriptions. Modal focus traps. `aria-label` on icon-only buttons. WCAG AA contrast.
+- **Next.js & ImageKit:** Aggressive caching, intelligent `srcset`, and perfect `sizes` attributes ensure desktop masonry grids populate instantly.
+- **Generative Chat UI:** Components inside the chat must be highly composed and state-aware, capable of mutating based on user interaction while preserving strict top-to-bottom conversational flow. Use React Server Components or tailored UI streaming (e.g., Vercel AI SDK) for these magical components.
+- **Accessibility:** Keyboard navigation must be flawless, with custom, sharp focus rings (`focus:ring-2 focus:ring-primary-900`) enabling power users to navigate the generative UI and image grid efficiently.

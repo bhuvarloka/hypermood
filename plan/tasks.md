@@ -59,10 +59,10 @@ Create `src/types/domain.ts` with application-level types that map to DB rows (R
 
 **Output:** Clients importable, types available.
 
-### Task 4 — Auth (OTP login + middleware)
+### Task 4 — Auth (OTP login + route protection)
 
 **Read:** `plan/stack.md` (Supabase Auth gotchas)
-**Do:** Create Next.js middleware that protects `/(app)/*` routes — redirects to `/login` if no session. Create a minimal login page at `(auth)/login/page.tsx` with email OTP input. After successful OTP verification, redirect to `/rolls`. No styling needed yet — functional only.
+**Do:** Create a minimal login page at `(auth)/login/page.tsx` with email OTP input. After successful OTP verification, redirect to `/rolls`. Protect `/(app)/*` routes by calling `supabase.auth.getUser()` in the layout Server Component — return `unauthorized()` if no session. No middleware/proxy. No styling needed yet — functional only.
 **Output:** Can log in via email OTP, session persists, protected routes redirect.
 
 ---
@@ -218,178 +218,255 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 ## Phase 5: Frontend
 
-> **Read `plan/frontend.md` before starting any task in this phase.** It contains the full design system (colors, typography, spacing, motion), screen specifications, selection flow, dimming behavior, preview panel, suggestions, stream of thought, actionable filters, and public gallery layout modes.
+> **`plan/frontend.md` is the source of truth for every visual and interaction decision in this phase.** Read it in full before starting any task. Tasks below are derived from it — if there is ever a conflict, `frontend.md` wins.
 
-### Task 17 — App layout shell + The Rail
+### Task 17 — Design system foundation
+
+**Read:** `plan/frontend.md` §Design System
+**Do:** Wire up the full design system before any screen is built. Everything downstream depends on this being correct.
+
+**Tailwind config (`tailwind.config.ts`):**
+- Extend `colors` with the exact `primary` and `semantic` palettes from `frontend.md` (warm zinc scale: 50, 100, 200, 800, 900, 950; semantic info/success/alert).
+- Extend `fontFamily`: `sans` → `["Dyatype Sans", "Helvetica Neue", "system-ui", "sans-serif"]`, `mono` → `["Neue Montreal Mono", "monospace"]`.
+- Default `borderRadius` must NOT be overridden globally — `rounded-none` is the app default; curves appear only where the spec calls for them (`rounded-xl`, `rounded-2xl`).
+
+**`globals.css`:**
+- Define `.animate-bloom`: `opacity-0 scale-95` → `opacity-100 scale-100`, `150ms ease-out`. Used for all generative UI elements appearing in chat, the selection strip, hover overlays on the grid, and the preview panel.
+- Define `.animate-swiss`: `transition-all duration-200 ease-out`. Used for standard hover micro-interactions (Rail roll names, button hovers, row states). No bouncy easing anywhere.
+- Custom CSS for masonry layout (CSS `columns` or `grid` with `auto` rows — whichever avoids JS for the internal grid at this scale).
+- Set `focus:ring-2 focus:ring-primary-900` as the app-wide keyboard focus ring. No browser defaults.
+
+**Typographic discipline (enforce at this step, not component by component):**
+- `text-lg` is the minimum body size. Nothing smaller appears in the authenticated app.
+- Hierarchy comes from size and weight, never from muting color to gray.
+- Monospace (`font-mono`) is used exclusively for technical readouts: timestamps, counts, scores, tags, status lines, processing indicators.
+
+**Output:** `pnpm dev` shows no visual regressions. Tailwind palette, fonts, animation utilities, and focus rings are available globally. Confirmed by visually checking a test page with each color, font, and animation class.
+
+### Task 18 — Login page (The Dark Void)
+
+**Read:** `plan/frontend.md` §Login
+**Do:** Build `(auth)/login/page.tsx` with full design fidelity — this is the threshold, the only fully dark screen.
+
+- Full viewport, `bg-primary-950`. No other background.
+- `"Hypermood"` in `text-5xl tracking-tight text-white font-sans`. Centered.
+- A single email input. A single submit button. No labels, no supporting copy, no decorative elements. Absolute silence.
+- Input and button: `rounded-none` (sharp, like everything else). White text on dark. Focus ring: `focus:ring-2 focus:ring-white` (inverted from app default because background is dark).
+- OTP verification flow from Task 4. After successful login, redirect to `/rolls`.
+
+**Output:** Login screen matches the dark void spec. Functional OTP auth. No light backgrounds, no shadows, no decorative chrome.
+
+### Task 19 — App layout shell + The Rail
+
+**Read:** `plan/frontend.md` §The Rail
+**Do:** Build the authenticated app layout `(app)/layout.tsx` with The Rail.
+
+**The Rail is not a menu. It is a portal.**
+- Sits silently on the left, flush with the canvas. No border, no shadow, no panel background that differs from the page — it blends into the white canvas.
+- Roll names listed directly in `text-lg`. No icons, no category headers, no indentation hierarchy.
+- **Hover micro-preview:** Hovering a Roll name triggers a 2×2 grid of mini thumbnails that appears with `.animate-bloom`. This is a glimpse, not a tooltip — it feels like the roll breathing. Use ImageKit thumbnail transforms for the 4 thumbnails. The micro-preview disappears instantly on mouse-leave (no delay).
+- The hover state itself on the roll name uses `.animate-swiss` — a subtle `bg-primary-50` shift, nothing more.
+- User avatar at the bottom with logout. Monospace email or name label, `text-base font-mono`.
+- Content area fills the remaining viewport on pure white (`bg-white`). No inner padding on the layout shell — each page controls its own spacing.
+
+**Output:** Navigable app shell. Rail is visually invisible as a "menu." Micro-preview blooms on hover. Keyboard focus navigable through roll list.
+
+### Task 20 — Roll list + create
 
 **Read:** `plan/frontend.md`
-**Do:** Build the authenticated app layout `(app)/layout.tsx` with The Rail — a sidebar that is not a traditional menu but a portal to Rolls. It sits silently on the left, flush with the canvas, `text-lg` typography. Roll names listed directly. Hovering a Roll name shows a micro-preview: a 2×2 grid of mini thumbnails (`.animate-bloom` on appear) giving a glimpse of the roll before clicking. User avatar at bottom with logout. Content area fills the rest of the viewport on white background.
-**Output:** Navigable app shell with Rail matching frontend.md spec.
+**Do:** Build the `/rolls` dashboard page.
 
-### Task 18 — Roll list + create
+- Roll rows, not cards. No `border`, no `rounded`, no `shadow`. Each roll occupies a full-width row with a `hover:bg-primary-50` shift (`.animate-swiss`). Depth through background, never borders.
+- Each row: 2×2 thumbnail mosaic (ImageKit transforms, `rounded-none`, `gap-1`) on the left. Roll name in `text-3xl font-medium` beside it. Image count and indexing progress in `text-base font-mono` below the name (e.g., `"142 images · 138 indexed"`).
+- Stats row at the very top of the page: total rolls, total images, total indexed — all in `text-base font-mono`. No labels boxed or badged — plain mono text.
+- **"New Roll" creation:** An inline reveal — no modal, no route change. Clicking "New Roll" (a ghost-style button, `text-base font-medium`, no fill) expands an inline input field with `rounded-none` sharp edges directly in the list. Press Enter or blur to confirm. Calls `createRoll` Server Action. On success, the new roll appears in the list with `.animate-bloom`.
+- No muted text anywhere. If something is secondary, make it smaller or mono — not gray.
 
-**Read:** `plan/frontend.md`
-**Do:** Build Dashboard page (`/`) showing user's rolls as cards with 2×2 thumbnail mosaics. Each roll shows name, image count, indexing progress. "New Roll" button with name/description input. Stats row at top (total rolls, images, indexed). Calls `createRoll` Server Action.
-**Output:** Can create and browse rolls.
+**Output:** Can create and browse rolls. Zero boxed cards. Inline creation works. Indexing progress visible in mono font.
 
-### Task 19 — Upload (ambient drag-and-drop)
+### Task 21 — Upload (ambient drag-and-drop)
 
-**Read:** `plan/frontend.md`
-**Do:** No dedicated upload page. Instead, implement drag-and-drop upload on the Roll View. Dragging files over the image grid or chat area triggers an upload overlay with crisp typography: "Drop to index." On drop, files upload to ImageKit and indexing begins via Inngest. Progress shown as a monospaced readout (`Uploading & Indexing 14 of 42...` in `text-base font-mono`) that sits unobtrusively near the chat. Already-indexed images appear in the grid immediately — the user can start chatting while background processing continues. Subscribe to Supabase Realtime on `images` table filtered by rollId to update statuses.
-**⚠️ Complexity flag:** Realtime subscription for progress tracking needs careful cleanup on unmount. Batch UI updates to avoid re-rendering per image.
-**Output:** Frictionless upload + progress within the roll view.
+**Read:** `plan/frontend.md` §Upload
+**Do:** No dedicated upload page. Drag-and-drop is ambient — it lives on the Roll View (Task 22), not a separate route.
 
-### Task 20 — The Command Center (chat + grid + selection + dimming)
+- Dragging files anywhere over the image grid or chat area activates the upload state. Overlay reads `"Drop to index."` in `text-3xl font-medium` — crisp, typographic, not a spinner or icon. `rounded-none`. The overlay is a semi-transparent layer over the existing content, not a full viewport takeover.
+- On drop: files upload to ImageKit (calls `uploadImages` Server Action from Task 11). Indexing starts via Inngest automatically.
+- Progress readout appears unobtrusively near the chat — not a modal, not a toast. A single line: `"Uploading & Indexing 14 of 42..."` in `text-base font-mono`. It updates in place as progress advances.
+- Already-indexed images appear in the grid immediately as they complete. The user can start chatting with the indexed subset while the rest processes in the background.
+- Subscribe to Supabase Realtime on `images` where `roll_id = rollId`. On status change to `indexed`, add the image to the grid without full re-render. Batch state updates — do not trigger a re-render per individual image.
+- On unmount, explicitly unsubscribe from the Realtime channel.
 
-**Read:** `plan/frontend.md` §The Command Center
-**Do:** Build `/rolls/[rollId]` page — the core of the app. Two symbiotic entities in a vertical stack: the Chat (engine, top) and the Grid (output, bottom).
+**⚠️ Complexity flag:** Realtime subscription cleanup is critical. Batch grid updates by collecting status changes in a buffer and flushing on `requestAnimationFrame` or a short debounce (50ms).
 
-**The Chat (top):**
+**Output:** Frictionless upload. Progress in mono. Grid populates live. Realtime subscription cleans up correctly.
 
-- The input box is the hero element — a single, centered, punctually-rounded (`rounded-2xl`) field resting prominently at the top of the page. It drives everything below. This is not a sidebar or a secondary panel — it is the primary interface.
-- Chat history flows above the input (or collapses upward). Clean, large typography — `text-lg` minimum, never smaller. Messages: user messages and assistant responses in a simple top-to-bottom conversational flow.
-- Sends messages via `sendMessage` Server Action. Each assistant response that returned results shows the image count and the interpreted filter (collapsed by default, toggleable).
-- **Selection strip:** The moment the first image is selected in the grid, a strip appears *inside* the chat input area, directly above the text field, using `.animate-bloom`. The strip contains:
-  - Small square thumbnails of selected images (`w-5 h-5`, `rounded-none`, sharp edges matching the grid aesthetic), scrollable horizontally. Each thumbnail has a small × to deselect on hover.
-  - A count line directly beneath the thumbnails, above the text input: `"16 selected"` in `text-base font-mono`.
-  - When no images are selected, the strip is completely invisible. The input returns to its default state.
+### Task 22 — The Command Center (chat + grid + selection + dimming)
 
-**The Grid (bottom):**
+**Read:** `plan/frontend.md` §The Command Center, §Image-as-Prompt Selection Flow
+**Do:** Build `/rolls/[rollId]` — the core of the app. Two symbiotic entities in a strict vertical stack: Chat (top), Grid (bottom). Build in the sub-steps listed below.
 
-- Fluid masonry layout flowing strictly beneath the chat. Images are edge-to-edge relative to their cells, `gap-1`. Loaded via ImageKit URLs with thumbnail transforms.
-- **Click** any image = toggle selection. No mode switch, no button, no menu. Selection is always available. Selected images show `ring-2 ring-semantic-info ring-offset-2`.
-- **Hover** any image = reveal contextual tools (Fullscreen icon to open Image Detail) as small overlaid icons with `.animate-bloom`. Zero layout shift.
+**Sub-step 1 — Chat input as hero + message flow:**
+- The input is a single `rounded-2xl` field, centered, prominent. It is not a sidebar element — it is the first thing the eye lands on.
+- Chat history flows above the input in top-to-bottom order. `text-lg` minimum for all message text, never smaller. User messages and assistant responses are visually distinct but neither is subordinate.
+- Each assistant response that returned results shows: result count in `text-base font-mono`, the interpreted filter collapsed by default (a small toggle reveals it), and follow-up suggestion chips beneath (wired in Task 25).
+- Keyboard shortcut: `Enter` submits, `Shift+Enter` for newlines. Focus ring: `focus:ring-2 focus:ring-primary-900`.
 
-**Querying + grid response:**
+**Sub-step 2 — Image grid:**
+- Fluid masonry layout, CSS-only (`columns` or equivalent). `gap-1`. Images edge-to-edge within cells. `rounded-none`.
+- Images loaded via ImageKit URLs with thumbnail transforms (w-400, q-80) and responsive `srcset`. Never load full-resolution images into the grid.
+- Each image cell is a stable DOM node — no unmounting/remounting as grid state changes. Use CSS `opacity` transitions, never add/remove elements.
 
-- User types a text prompt alongside selections (e.g., "find 50 more with this same vibe") and sends. Both references and text submit together to the image-as-prompt pipeline.
-- The grid responds with three-tier opacity:
-  - **Result images:** Full `opacity-100`.
-  - **Reference images (user's selections):** Keep `ring-2 ring-semantic-info` at full opacity — visually distinct as "input."
-  - **All other images:** Dim to `opacity-15`. Ghosts — present for spatial memory, but the eye skips them. No reflow. No disappearing. No layout shift.
-- **Result count** appears near the chat: `"50 results from 1,000"` in `text-base font-mono`.
-- The user can refine with follow-up messages ("narrow to 20", "exclude the ones with people"). The grid updates — some bright images dim, others emerge. The conversation builds on itself, each refinement sharpening the selection.
-- **Clearing:** Typing "show all" in chat, or a small ghost-style reset button near the result count, restores all images to `opacity-100` and clears all selections. Full roll restored.
+**Sub-step 3 — Wire chat → grid (query results):**
+- On `sendMessage` response, the grid receives a set of `resultImageIds`.
+- Three-tier opacity applied immediately (no animation delay — the state change is the feedback):
+  - **Result images:** `opacity-100`
+  - **Reference images (selected by user before send):** `opacity-100` + `ring-2 ring-semantic-info ring-offset-2` (they remain "input," visually distinct)
+  - **All other images:** `opacity-15` — ghosts. Present for spatial memory. No reflow. No disappearing. No layout shift.
+- Result count appears near the chat input: `"50 results from 1,000"` in `text-base font-mono`.
+- **Clearing:** A ghost-style reset button near the result count (`"Show all"`) restores all images to `opacity-100` and clears selections. Also triggered if user types "show all" in chat.
 
-**⚠️ Complexity flag:** This is the most complex UI surface. Build in sub-steps:
+**Sub-step 4 — Click-to-select + selection strip:**
+- Clicking any image toggles selection. No mode switch. No "enter select mode" button. Selection is always active.
+- Selected images: `ring-2 ring-semantic-info ring-offset-2`.
+- The moment the first image is selected, a **selection strip** appears inside the chat input area, directly above the text field, using `.animate-bloom`:
+  - Row of small square thumbnails (`w-5 h-5`, `rounded-none`), scrollable horizontally. Each has a `×` on hover to deselect.
+  - Below thumbnails, above the text input: `"16 selected"` in `text-base font-mono`.
+- When zero images are selected, the strip is invisible. The input box looks exactly as it always does — no reserved space, no empty strip.
 
-1. Chat input as hero element + basic message send/receive
-2. Static image grid with masonry layout
-3. Wire chat → grid (query results update the grid)
-4. Click-to-select + selection strip in chat input with count
-5. Three-tier dimming behavior on query results
+**Sub-step 5 — Hover tools on grid images:**
+- Hovering an image reveals a Fullscreen icon (opens The Darkroom, Task 27) as a small overlaid icon. Uses `.animate-bloom`. Zero layout shift — the icon is absolutely positioned over the image, not inserted into document flow.
 
-**Output:** Core app experience works — chat drives grid, frictionless selection, dimming preserves spatial memory.
+**Accessibility:**
+- All interactive grid images have `role="button"`, `tabIndex={0}`, and respond to `Enter`/`Space` for selection.
+- Keyboard focus ring on grid images: `focus:ring-2 focus:ring-primary-900`.
+- The chat input and selection strip are fully keyboard navigable.
 
-### Task 21 — Preview panel + gallery creation
+**⚠️ Complexity flag — build in strict sub-step order. Do not attempt all five at once.**
 
-**Read:** `plan/frontend.md` §Preview Panel (The Narrative Check)
-**Do:** Build the slide-up preview panel and integrate gallery creation into it.
+**Output:** Chat drives grid. Frictionless click-to-select. Selection strip blooms in. Three-tier dimming preserves spatial memory. Keyboard navigable.
 
-**Preview panel:**
-- A panel rises from the bottom of the viewport (~60% height). The main grid stays behind it, visible through the backdrop (`bg-primary-950/40`).
-- **Trigger:** A "Preview selection" ghost button appears near the result count once results exist. Also accessible via keyboard shortcut (`Space` when images are selected).
-- **Content:** Result images displayed in a tight masonry grid (3-4 columns, small thumbnails). Clean, dense, narrative-focused — this is where the user judges whether the set tells a story. Images populate with a subtle stagger animation.
-- **Header inside panel:** Count (`"50 images"` in `text-xl font-medium`) + "Save as Gallery" button (`bg-primary-900 text-white rounded-xl`).
-- **Dismiss:** Click backdrop above panel, press Escape, or drag panel down. Grid underneath is exactly where the user left it — no reflow, no state change.
-- **Animation:** Panel slides up with `.animate-bloom` timing (150ms ease-out).
-
-**Save-as-gallery flow (inside panel):**
-1. Clicking "Save as Gallery" reveals inline fields — gallery name input, layout selector (masonry/timeline/grid), visibility toggle (public/private).
-2. Submit calls `createGallery` Server Action with current result image IDs.
-3. Panel closes. Confirmation appears in the chat: `"Gallery saved → /g/[slug]"` with clickable link.
-4. Gallery is accessible from the Gallery Manager and (if public) via the public URL.
-
-**Output:** Preview panel for narrative judgment + gallery creation flows naturally from the curation experience.
-
-### Task 22 — Stream of thought (processing indicator)
+### Task 23 — Stream of thought (processing indicator)
 
 **Read:** `plan/frontend.md` §Stream of Thought
-**Do:** When a query is processing, show a temporary assistant message in the chat with mono-font processing lines that appear sequentially.
+**Do:** When a query is processing, a temporary assistant message occupies the exact position the real response will take — no layout shift when results arrive.
 
-1. Create a `ProcessingIndicator` component. Renders `text-base font-mono text-primary-200` lines.
-2. Lines appear one by one with `.animate-bloom` and staggered delay (100ms between lines):
-   - Text query: `Interpreting query...` → `Searching N images...` → `Found M matches`
-   - Image-as-prompt: `Computing visual similarity...` → `Blending with text prompt...` → `Found M matches`
-3. The processing message occupies the same position the real response will take. When results arrive, processing fades out and the real response blooms in — no layout shift.
-4. Wire into the `sendMessage` flow: show processing immediately on send, replace when response arrives.
+1. Create `components/chat/ProcessingIndicator`. Renders `text-base font-mono text-primary-200` lines. It is a full chat message bubble placeholder — same width, same position — not a floating spinner.
+2. Lines appear one by one with `.animate-bloom` and 100ms staggered delay between each:
+   - Text query: `"Interpreting query..."` → `"Searching N images..."` → `"Found M matches"`
+   - Image-as-prompt: `"Computing visual similarity..."` → `"Blending with text prompt..."` → `"Found M matches"`
+3. When the real response arrives, the `ProcessingIndicator` is replaced in-place by the assistant message — no reflow, no layout jump. The swap is instant; the new content uses `.animate-bloom` to appear.
+4. Wire into `sendMessage`: insert `ProcessingIndicator` into chat state immediately on send, replace with real response on resolve.
 
-**Output:** User always knows the system is working. Feels precise, not generic.
+**Output:** User always knows the system is working. Terminal-like precision. No layout shift on response arrival.
 
-### Task 23 — Roll suggestions backend
+### Task 24 — Roll suggestions backend
 
 **Do:** Backend support for contextual starter suggestions on each roll.
 
-1. Run this SQL in Supabase SQL editor: `ALTER TABLE rolls ADD COLUMN suggestions jsonb;`
-2. Create a `generateRollSuggestions` utility in `lib/suggestions.ts` that runs SQL aggregations on `image_metadata` for a roll: count by `scene.setting`, `people.count` ranges, top tags, `quality_score` distribution, `time_of_day` spread. From these stats, generate 3-4 natural-language starter suggestions. This is template-based, not an LLM call.
-3. Create an Inngest function `generate-roll-suggestions` triggered by `indexing/complete.roll` event (fire this event at the end of `index-roll` fan-out when all images are indexed). Writes suggestions to `rolls.suggestions`.
+1. Run this SQL: `ALTER TABLE rolls ADD COLUMN suggestions jsonb;`
+2. Create `lib/suggestions.ts` — `generateRollSuggestions(rollId)`. Runs SQL aggregations on `image_metadata` for the roll: count by `scene.setting`, `people.count` ranges, top tags, `quality_score` distribution, `time_of_day` spread. From these stats, produce 3-4 natural-language starter suggestions. Template-based — no LLM call.
+3. Create Inngest function `generate-roll-suggestions` triggered by `indexing/complete.roll` event (fired at the end of the `index-roll` fan-out when all images are indexed). Writes suggestions to `rolls.suggestions`.
 4. On re-index, regenerate suggestions.
 
 **Output:** Every indexed roll has contextual starter suggestions stored in the DB.
 
-### Task 24 — Suggestions + follow-ups frontend
+### Task 25 — Suggestions + follow-ups frontend
 
 **Read:** `plan/frontend.md` §Suggestions, §Follow-up suggestions
-**Do:** Two UI features that make the chat feel like a collaborator.
+**Do:** Two UI features that make the chat feel like a collaborator, not a search box.
 
-**Initial suggestions:**
-- When no conversation exists, render suggestions from `rolls.suggestions` as ghost-style pill chips beneath the chat input (`rounded-xl`, `text-base`, `border border-primary-200`, `hover:bg-primary-100`), laid out horizontally, centered. Clicking auto-sends the suggestion as a message.
-- Before indexing completes (or if `suggestions` is null), show static universal starters: `"Show me the best shots"`, `"Find all portraits"`, `"What's in this roll?"`.
+**Initial suggestions (empty chat state):**
+- Render 3-4 suggestion chips beneath the chat input when no conversation exists. Ghost-style pills: `rounded-xl`, `text-base`, `border border-primary-200`, `hover:bg-primary-100` (`.animate-swiss`). Laid out horizontally, centered.
+- Source: `rolls.suggestions` if indexed and populated. Fallback to universal starters (`"Show me the best shots"`, `"Find all portraits"`, `"What's in this roll?"`) if `suggestions` is null or indexing incomplete.
+- Clicking a chip pre-fills and auto-submits the chat input — exactly as if the user had typed and pressed Enter.
 
-**Follow-up suggestions:**
-1. Extend the query interpreter prompt in `lib/gemini/query.ts` — add to the system prompt: "Also return `suggested_followups`: an array of 2-3 short natural-language follow-up queries the user might want to try next, based on the current result set. Reference specific aspects of the results."
-2. Parse `suggested_followups` from the LLM response alongside the query plan.
-3. Return follow-ups as part of the `sendMessage` response. Store in the existing `interpreted_filter` JSONB as an additional `followups` key.
-4. Render follow-up chips beneath each assistant message that has results. Same pill styling as initial suggestions. Clicking sends as next message.
+**Follow-up suggestions (after each assistant response with results):**
+1. Extend the `lib/gemini/query.ts` system prompt: ask for `suggested_followups: string[]` (2-3 items, contextual to the result set, not generic). Examples: `"Narrow to close-ups only"`, `"Exclude blurry ones"`, `"Split by time of day"`. Follow-ups must reference what just happened — they are not universal.
+2. Parse `suggested_followups` from the response alongside the query plan.
+3. Return follow-ups as part of `sendMessage` response payload. Store under a `followups` key in `interpreted_filter` JSONB.
+4. Render follow-up chips beneath each assistant message that has results. Same pill styling. Clicking sends as next message.
 
-**Output:** Chat never feels cold. User always has a next step.
+**Output:** Chat never feels cold. Initial suggestions solve the blank canvas. Follow-ups keep the conversation moving.
 
-### Task 25 — Actionable interpreted filters
+### Task 26 — Actionable interpreted filters
 
 **Read:** `plan/frontend.md` §Actionable Interpreted Filters
-**Do:** Transform the collapsed interpreted filter from a diagnostic readout into a direct manipulation tool.
+**Do:** The interpreted filter is not a debug readout — it is a direct manipulation panel. Transform it accordingly.
 
-1. Parse `interpreted_filter` JSONB from the assistant message into individual filter conditions.
-2. Render each condition as an editable chip: `text-base font-mono`, `bg-primary-100 rounded-lg px-3 py-1`. Examples: `scene: outdoor`, `blur_score < 0.3`, `tags: portrait`.
-3. Each chip has a × button on hover. Clicking × removes that filter and re-runs the query automatically.
-4. A small `+` button at the end of the chip row opens an inline input for adding a filter condition manually.
-5. Grid updates live as filters are added/removed — same dimming behavior as a new chat query.
-6. Create a `rerunWithModifiedFilters` function in `actions/chat.ts` that takes an existing `QueryPlan`, applies modifications, and calls `executeQuery` directly (bypassing the NL interpreter).
+1. Parse `interpreted_filter` JSONB from each assistant message into discrete filter conditions.
+2. Render each condition as an editable chip: `text-base font-mono`, `bg-primary-100 rounded-lg px-3 py-1`. Examples: `scene: outdoor`, `blur_score < 0.3`, `tags: portrait`. Chips sit in a row, collapsed under the assistant response toggle.
+3. Each chip has a `×` button visible on hover. Clicking `×` removes that filter and re-runs the query automatically — same dimming behavior as a new chat query.
+4. A `+` button at the end of the chip row opens a small inline input (not a modal) for adding a filter condition manually.
+5. Add `rerunWithModifiedFilters(existingPlan: QueryPlan, modifications: FilterMod[])` to `actions/chat.ts`. It applies the modifications to the plan and calls `executeQuery` directly — bypasses the NL interpreter entirely.
 
-**Output:** Users can start with natural language and fine-tune with direct manipulation.
+**Output:** Natural language to start, surgical direct manipulation to refine. No round-trip to the LLM on filter edits.
 
-### Task 26 — Image Detail (The Darkroom)
+### Task 27 — Image Detail (The Darkroom)
 
 **Read:** `plan/frontend.md` §Image Detail
-**Do:** Build the full-screen image detail overlay.
+**Do:** Build the full-screen image detail overlay triggered by the Fullscreen icon on grid image hover.
 
-- Full-screen overlay. Background is pure black (`primary-950`) or pure white, isolating the image completely.
-- Image commands maximum viewport space, maintaining exact aspect ratio.
-- Hidden UI: hover near edges to reveal next/prev arrows, hover bottom to summon technical details (mono font typography showing dimensions, index data, tags, quality score).
-- Arrow key navigation through current result set. Escape to close. Click backdrop to close.
+- Full-screen overlay (`fixed inset-0`). Background starts as `bg-primary-950` (pure black) — the default dark isolation. A toggle in the overlay switches to pure white (`bg-white`) for images that read better on light. No gray, no semi-transparent.
+- Image commands maximum viewport space at exact aspect ratio. No cropping. No letterboxing with colored bands — the background color is the letterbox.
+- **Hidden UI — revealed by proximity:**
+  - Hovering near left/right edges: prev/next arrows appear with `.animate-bloom`. Vanish when mouse moves to center.
+  - Hovering near the bottom: technical details panel rises with `.animate-bloom`. Shows in `font-mono`: filename, dimensions (`2400 × 1600`), captured date, quality score, top tags, scene type. Vanishes on mouse-leave.
+- **Navigation:** Arrow keys (`←`/`→`) navigate through the current result set (not the full roll — context-aware). `Escape` closes. Clicking the background closes.
+- Roll-over behavior: reaching the end of the result set stops (no wrap-around).
 
-**Output:** Immersive single-image view with hidden metadata.
+**Output:** Immersive, isolated single-image view. Background isolation (dark/light toggle). Hidden metadata reveals on hover. Keyboard navigable.
 
-### Task 27 — Gallery management
+### Task 28 — Preview panel + gallery creation
 
-**Read:** `plan/frontend.md`
-**Do:** Gallery management is surfaced via a full-height drawer from the right (or via natural language in chat: "show my galleries"). The drawer lists user's galleries: name, image count, public/private badge, link to public URL if public. Click into a gallery within the drawer to see its images with reorder (drag and drop) and remove capabilities. Edit name, layout, visibility. If a dedicated `/galleries` route is needed for direct navigation, it can exist as a simple page that opens the same drawer.
-**Output:** Full gallery management.
+**Read:** `plan/frontend.md` §Preview Panel (The Narrative Check)
+**Do:** Build the slide-up preview panel and the save-as-gallery flow that lives inside it.
 
-### Task 28 — Public gallery page
+**The panel:**
+- `fixed bottom-0 inset-x-0`, height ~60vh. Slides up with `.animate-bloom` (150ms ease-out). The main grid stays behind it — visible and spatially unchanged — through the backdrop (`bg-primary-950/40`).
+- **Trigger:** A ghost-style `"Preview selection"` button near the result count (appears once results exist). Also: `Space` when images are selected (keyboard shortcut).
+- **Content:** Selected/result images in a tight masonry grid (3-4 columns). Small thumbnails, `rounded-none`, `gap-1`. Narrative density — this is where the user judges whether the set tells a story. Images populate with a 30ms stagger using `.animate-bloom`.
+- **Header row inside panel:** Count (`"50 images"` in `text-xl font-medium`) on the left. `"Save as Gallery"` button (`bg-primary-900 text-white rounded-xl`, `text-base font-medium`) on the right.
+- **Dismiss:** Click backdrop above the panel. Press `Escape`. Or drag the panel downward past a threshold. Grid is exactly where it was — no reflow, no state change.
+
+**Save-as-gallery flow (inline inside the panel, no modal):**
+1. Clicking "Save as Gallery" reveals inline fields within the panel header area: gallery name input (`rounded-none`, `text-base`), layout toggle (masonry / timeline), visibility toggle (public / private). All sharp edges matching the app default.
+2. Submit calls `createGallery` Server Action.
+3. Panel closes. A confirmation line appears in the chat as an assistant message: `"Gallery saved → /g/[slug]"` with the slug as a clickable link (`text-semantic-info`).
+
+**Output:** Preview panel for narrative judgment. Save-as-gallery is one gesture from the curation result.
+
+### Task 29 — Gallery management
+
+**Read:** `plan/frontend.md` §Settings / Manager
+**Do:** Gallery management via a full-height drawer from the right — not a separate page, not a modal.
+
+- The drawer opens from a `"Galleries"` entry at the bottom of the Rail (or via typing `"show my galleries"` in chat on any roll — the chat action recognizes gallery management intent and triggers the drawer).
+- **Drawer content:** User's galleries listed as rows (not cards). Name, image count, public/private badge in `text-base font-mono`, link to public URL if public. No borders, no shadows — rows use `hover:bg-primary-50` shift.
+- **Clicking into a gallery:** Drawer content replaces with the gallery's images in a compact grid. Controls: reorder (drag and drop), remove images (`×` on hover), edit name/layout/visibility inline.
+- If `/galleries` route is needed for direct navigation, it renders the same drawer as the primary content.
+- All UI inside the drawer uses the same sharp-edge, mono-for-metadata, no-shadow conventions as the rest of the app.
+
+**Output:** Full gallery management. Accessible from Rail and from natural language in chat.
+
+### Task 30 — Public gallery page
 
 **Read:** `plan/frontend.md` §Public Gallery
-**Do:** Build `/g/[slug]` page (no auth required, no Rail). Fetches gallery via `getPublicGallery`. Minimalist top bar: logo (top-left), gallery name `text-xl font-medium` (center), view mode toggle icons (top-right, if owner enabled multiple layouts).
+**Do:** Build `/g/[slug]` — no auth required, no Rail, pure content.
 
-**View modes:**
+**Structure:**
+- Minimal top bar: logo (`text-base font-medium`, top-left), gallery name (`text-xl font-medium`, center), view mode toggle icons (top-right, shown only if multiple layouts are enabled for this gallery).
+- Fetches gallery via `getPublicGallery` action. If not found or `is_public = false`: 404 page.
 
-- **Masonry:** Fluid columns, vertical scroll. Native aspect ratios, `gap-1`.
-- **Timeline:** On large screens, a horizontal scroll track — images side-by-side, aligned on central X-axis, each max `w-1/4` of viewport, native aspect ratios. On mobile, folds to a single-column vertical stack.
+**View modes (two only — masonry and timeline, matching `frontend.md`):**
+- **Masonry:** Fluid columns, vertical scroll. Native aspect ratios. `gap-16` — editorial spacing, distinct from the internal grid's `gap-1`. This is the public surface; images need room.
+- **Timeline:** Large screens: `flex flex-row overflow-x-auto items-center`. Images side-by-side, aligned on a central X-axis. Each image max `lg:w-1/4` viewport, native aspect ratio. `gap-1 md:gap-2`. Mobile: folds to full-width single-column vertical stack (`flex-col`).
 - **Mobile (all modes):** Full-width single-column stack.
-- Transitions between modes should be smooth (View Transitions API or Framer Motion) — no jarring layout jumps.
 
-Images served via ImageKit with responsive transforms and srcset. If gallery not found or not public, show 404.
-**Output:** Shareable public gallery works.
+**Mode transition:** Switching between masonry and timeline must be smooth — use the View Transitions API (`document.startViewTransition`) or Framer Motion layout animations. No jarring reflow. Images glide from their masonry positions into the horizontal timeline strip.
+
+Images served via ImageKit with responsive transforms and `srcset`. Aggressive caching headers (static at build time where possible).
+
+**Output:** Shareable public gallery. Both layout modes work. Mode switch is smooth. 404 on private/missing.
 
 ---
 

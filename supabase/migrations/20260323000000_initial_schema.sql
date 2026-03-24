@@ -102,6 +102,20 @@ CREATE UNIQUE INDEX galleries_user_id_slug_idx ON galleries (user_id, slug);
 CREATE INDEX idx_image_metadata_image_id ON image_metadata (image_id);
 
 -- ============================================================
+-- GRANTS
+-- Raw SQL migrations don't auto-grant table access to Supabase roles.
+-- RLS policies enforce row-level restrictions on top of these grants.
+-- ============================================================
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.rolls             TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.images            TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.image_metadata    TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.image_embeddings  TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_messages     TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.galleries         TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.gallery_images    TO anon, authenticated;
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 
@@ -254,6 +268,31 @@ BEGIN
     p_limit::int
   );
 END;
+$$;
+
+-- Returns up to p_limit indexed image storage_keys per roll, ordered by upload time.
+-- ROW_NUMBER() partitioned by roll_id guarantees the cap is enforced per roll,
+-- not as a global LIMIT that would starve later rolls of results.
+CREATE OR REPLACE FUNCTION get_roll_thumbnails(
+  p_roll_ids uuid[],
+  p_limit     int DEFAULT 4
+)
+RETURNS TABLE(roll_id uuid, storage_key text)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+  SELECT roll_id, storage_key
+  FROM (
+    SELECT
+      i.roll_id,
+      i.storage_key,
+      ROW_NUMBER() OVER (PARTITION BY i.roll_id ORDER BY i.uploaded_at) AS rn
+    FROM images i
+    WHERE i.roll_id = ANY(p_roll_ids)
+      AND i.status = 'indexed'
+  ) ranked
+  WHERE rn <= p_limit;
 $$;
 
 -- ============================================================

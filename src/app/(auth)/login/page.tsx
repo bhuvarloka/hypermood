@@ -1,28 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-const centerLayout: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '100vh',
-  padding: '1rem',
-}
-
-export default function LoginPage() {
-  const searchParams = useSearchParams()
-  const callbackError = searchParams.get('error')
-
+function LoginForm() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState<'email' | 'code'>('email')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -30,56 +20,111 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        // After clicking the magic link, redirect to the auth callback handler.
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      // No emailRedirectTo — sends a 6-digit code instead of a magic link.
     })
 
     if (error) {
       setError(error.message)
     } else {
-      setSubmitted(true)
+      setStep('code')
     }
 
     setLoading(false)
   }
 
-  if (submitted) {
-    return (
-      <main style={centerLayout}>
-        <h1>Check your email</h1>
-        <p>We sent a magic link to <strong>{email}</strong>. Click it to sign in.</p>
-      </main>
-    )
+  async function handleCodeSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'email',
+    })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      router.push('/rolls')
+    }
+
+    setLoading(false)
   }
 
   return (
-    <main style={centerLayout}>
-      <h1>Sign in to Hypermood</h1>
-      {callbackError === 'auth_callback_failed' && (
-        <p style={{ color: 'red' }}>Your sign-in link was invalid or expired. Please try again.</p>
+    <>
+      <h1 className="text-5xl tracking-tight text-white font-sans mb-12">Hypermood</h1>
+
+      {step === 'email' ? (
+        <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3 w-full max-w-xs">
+          {error && (
+            <p className="text-base font-mono text-semantic-alert">{error}</p>
+          )}
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="your@email.com"
+            autoComplete="email"
+            className="bg-transparent border border-primary-800 text-white text-lg px-4 py-3 rounded-none placeholder:text-primary-800 focus:outline-none focus:ring-2 focus:ring-white animate-swiss"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="text-base font-medium text-primary-950 bg-white px-4 py-3 rounded-none animate-swiss hover:opacity-90 disabled:opacity-40"
+          >
+            {loading ? 'Sending…' : 'Continue'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleCodeSubmit} className="flex flex-col gap-3 w-full max-w-xs">
+          <p className="text-base font-mono text-primary-200 mb-1">
+            Code sent to {email}
+          </p>
+          {error && (
+            <p className="text-base font-mono text-semantic-alert">{error}</p>
+          )}
+          <input
+            type="text"
+            inputMode="numeric"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            required
+            placeholder="000000"
+            maxLength={6}
+            autoComplete="one-time-code"
+            autoFocus
+            className="bg-transparent border border-primary-800 text-white text-lg px-4 py-3 rounded-none placeholder:text-primary-800 focus:outline-none focus:ring-2 focus:ring-white animate-swiss tracking-widest"
+          />
+          <button
+            type="submit"
+            disabled={loading || code.length < 6}
+            className="text-base font-medium text-primary-950 bg-white px-4 py-3 rounded-none animate-swiss hover:opacity-90 disabled:opacity-40"
+          >
+            {loading ? 'Verifying…' : 'Sign in'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStep('email'); setCode(''); setError(null) }}
+            className="text-base font-mono text-primary-200 animate-swiss hover:text-white"
+          >
+            Use a different email
+          </button>
+        </form>
       )}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: '360px' }}>
-        <label htmlFor="email">Email address</label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          placeholder="you@example.com"
-          style={{ padding: '0.5rem', fontSize: '1rem', border: '1px solid #ccc', borderRadius: '4px' }}
-        />
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: '0.5rem 1rem', fontSize: '1rem', cursor: loading ? 'not-allowed' : 'pointer' }}
-        >
-          {loading ? 'Sending…' : 'Send magic link'}
-        </button>
-      </form>
+    </>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <main className="h-screen bg-primary-950 flex flex-col items-center justify-center px-6">
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </main>
   )
 }

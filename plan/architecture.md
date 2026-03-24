@@ -100,6 +100,7 @@ Two types of suggestions power the conversational UX:
 
 **Roll suggestions (generated once, after indexing):**
 After a roll finishes indexing (or after a significant batch completes), a lightweight server-side computation scans the indexed metadata to produce 3-4 contextual starter suggestions. This is NOT an LLM call — it's a SQL aggregation:
+
 - Count images by `scene.setting` (indoor/outdoor split)
 - Count images by `people.count` (portraits vs groups vs no-people)
 - Extract top 5 most common tags
@@ -138,14 +139,6 @@ The query interpreter prompt (Gemini Flash) is extended to return `suggested_fol
 **Dimension flexibility:** Gemini Embedding 2 supports Matryoshka Representation Learning (MRL). Default output is 3072 dimensions. Can be truncated to 768 or 1536 via the `output_dimensionality` parameter without re-embedding, trading minimal quality for storage savings. Start with 3072 for MVP.
 **Consequence:** Re-embedding 1000 images is ~$0.02 and ~10 minutes. Acceptable cost for model migration.
 
-### ADR-007: Supabase Realtime for indexing progress and chat sync
-
-**Decision:** Enable Realtime on `images` and `chat_messages` tables only.
-**Rationale:** Indexing progress is the first user impression — polling at 1s intervals per user during upload is wasteful and produces choppy UX. Realtime broadcasts status changes ~50ms after Inngest writes them. Chat sync enables seamless multi-tab usage at no extra cost.
-**What NOT to Realtime:** `image_metadata` and `image_embeddings` (written once, never modified). Rolls list (aggregates don't broadcast). Public gallery pages (immutable, no auth).
-**Implementation note:** `REPLICA IDENTITY FULL` is required on both tables so UPDATE payloads carry changed columns. Tables must be added to the `supabase_realtime` publication.
-**Frontend pattern:** Browser Supabase client subscribes in `useEffect`; server client cannot subscribe. Always unsubscribe on component unmount.
-
 ### ADR-004: pgvector in Supabase (not a dedicated vector DB)
 
 **Decision:** Use pgvector extension in the existing Supabase Postgres instance.
@@ -164,3 +157,11 @@ The query interpreter prompt (Gemini Flash) is extended to return `suggested_fol
 **Decision:** Timeline views sort by EXIF `DateTimeOriginal`. If absent, fall back to upload timestamp.
 **Rationale:** Photos from cameras/phones have EXIF. Screenshots, downloaded images, and scientific images often don't.
 **Implementation:** Extract EXIF at upload time, store `captured_at` (nullable) alongside `uploaded_at`. Sort: `COALESCE(captured_at, uploaded_at)`.
+
+### ADR-007: Supabase Realtime for indexing progress and chat sync
+
+**Decision:** Enable Realtime on `images` and `chat_messages` tables only.
+**Rationale:** Indexing progress is the first user impression — polling at 1s intervals per user during upload is wasteful and produces choppy UX. Realtime broadcasts status changes ~50ms after Inngest writes them. Chat sync enables seamless multi-tab usage at no extra cost.
+**What NOT to Realtime:** `image_metadata` and `image_embeddings` (written once, never modified). Rolls list (aggregates don't broadcast). Public gallery pages (immutable, no auth).
+**Implementation note:** `REPLICA IDENTITY FULL` is required on both tables so UPDATE payloads carry changed columns. Tables must be added to the `supabase_realtime` publication.
+**Frontend pattern:** Browser Supabase client subscribes in `useEffect`; server client cannot subscribe. Always unsubscribe on component unmount.

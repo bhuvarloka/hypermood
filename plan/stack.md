@@ -77,5 +77,6 @@
 **Supabase Auth (OTP):**
 
 - OTP login sends a magic link or code to email. No password storage.
-- Session management via `@supabase/ssr` middleware in Next.js.
-- RLS policies use `auth.uid()` — works automatically when client is initialized with session.
+- Session management via `@supabase/ssr` server client — reads cookies in Server Components and Server Actions. No middleware/proxy required.
+- Route protection is done in Server Components and layouts by calling `supabase.auth.getUser()` and returning `unauthorized()` if no session.
+- RLS policies use `auth.uid()` — works automatically when the server client is initialized with the session cookie.

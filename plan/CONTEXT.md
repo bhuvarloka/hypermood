@@ -39,18 +39,18 @@ Swiss-minimal. Warm zinc grayscale. The images and chat are kings — everything
 
 ## Plan Directory (source of truth)
 
-| File | Contents |
-|---|---|
-| `plan/architecture.md` | Three-phase pipeline, two-stage retrieval, indexing schema, suggestion generation, storage abstraction, chat persistence, all ADRs |
-| `plan/stack.md` | Full tech stack table, SDK list, gotchas for every technology |
-| `plan/setup.md` | Step-by-step manual setup (Supabase, Auth, Google AI, ImageKit, Inngest, env vars, verification) |
-| `plan/frontend-v2.md` | Complete design system (colors, typography, spacing, motion), all screen specs (Rail, Command Center, Upload, Image Detail, Settings, Public Gallery, Login), selection flow, dimming behavior, preview panel, suggestions, follow-ups, stream of thought, actionable filters |
-| `plan/tasks.md` | All implementation tasks (1–31 + future Task 32). Tasks 1–16 are complete. Tasks 17–31 are frontend + UX patterns. Task 32 is future narrative curation. |
-| `plan/prompt.md` | The vision indexing prompt (Task 7) — system prompt, user prompt, generation config |
-| `plan/structure.md` | Folder layout, naming conventions, code style rules, anti-patterns |
-| `plan/dev.md` | Dev setup commands, running locally, build, lint, type check |
-| `plan/glossary.md` | Domain terminology definitions |
-| `plan/testing.md` | Testing strategy, what to test, what not to test, Vitest setup |
+| File                   | Contents                                                                                                                                                                                                                                                                      |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `plan/architecture.md` | Three-phase pipeline, two-stage retrieval, indexing schema, suggestion generation, storage abstraction, chat persistence, all ADRs                                                                                                                                            |
+| `plan/stack.md`        | Full tech stack table, SDK list, gotchas for every technology                                                                                                                                                                                                                 |
+| `plan/setup.md`        | Step-by-step manual setup (Supabase, Auth, Google AI, ImageKit, Inngest, env vars, verification)                                                                                                                                                                              |
+| `plan/frontend.md`     | Complete design system (colors, typography, spacing, motion), all screen specs (Rail, Command Center, Upload, Image Detail, Settings, Public Gallery, Login), selection flow, dimming behavior, preview panel, suggestions, follow-ups, stream of thought, actionable filters |
+| `plan/tasks.md`        | All implementation tasks (1–31 + future Task 32). Tasks 1–16 are complete. Tasks 17–31 are frontend + UX patterns. Task 32 is future narrative curation.                                                                                                                      |
+| `plan/prompt.md`       | The vision indexing prompt (Task 7) — system prompt, user prompt, generation config                                                                                                                                                                                           |
+| `plan/structure.md`    | Folder layout, naming conventions, code style rules, anti-patterns                                                                                                                                                                                                            |
+| `plan/dev.md`          | Dev setup commands, running locally, build, lint, type check                                                                                                                                                                                                                  |
+| `plan/glossary.md`     | Domain terminology definitions                                                                                                                                                                                                                                                |
+| `plan/testing.md`      | Testing strategy, what to test, what not to test, Vitest setup                                                                                                                                                                                                                |
 
 ## Current Progress
 
@@ -60,7 +60,7 @@ Swiss-minimal. Warm zinc grayscale. The images and chat are kings — everything
 
 ## Key UX Patterns (from Shape of AI analysis)
 
-These are integrated into `frontend-v2.md` and `tasks.md`:
+These are integrated into `frontend.md` and `tasks.md`:
 
 1. **Suggestions** — contextual starter chips (generated from roll metadata stats) + follow-up chips after each query result
 2. **Stream of Thought** — mono-font processing indicator showing query stages in real-time
@@ -82,7 +82,7 @@ Click images in grid → thumbnails appear in chat input strip with count → ty
 ## Working With This Codebase
 
 - Read `plan/tasks.md` for what to build next
-- Read `plan/frontend-v2.md` before any frontend task
+- Read `plan/frontend.md` before any frontend task
 - Read `plan/architecture.md` for backend context
 - All Gemini model strings are in env vars — if a model is renamed, update `.env.local` and check `plan/stack.md` gotchas
 - Never store full URLs in DB — use `getImageUrl()` from `lib/imagekit/url.ts`
