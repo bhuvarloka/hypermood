@@ -18,13 +18,11 @@ export default async function RollsPage() {
         <NewRollButton />
       </div>
 
-      {rolls.length > 0 && (
-        <div className="flex gap-8 mb-10">
-          <Stat label="rolls" value={rolls.length} />
-          <Stat label="images" value={totalImages} />
-          <Stat label="indexed" value={totalIndexed} />
-        </div>
-      )}
+      <div className="flex gap-8 mb-10">
+        <Stat label="rolls" value={rolls.length} />
+        <Stat label="images" value={totalImages} />
+        <Stat label="indexed" value={totalIndexed} />
+      </div>
 
       {rolls.length === 0 ? (
         <p className="text-lg">No rolls yet. Create your first roll to get started.</p>

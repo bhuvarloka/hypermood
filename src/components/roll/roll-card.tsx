@@ -55,7 +55,7 @@ export function RollCard({ roll, storageKeys }: Props) {
             </span>
           )}
           {isComplete && (
-            <span className="text-base font-mono text-semantic-success">· indexed</span>
+            <span className="text-base font-mono text-semantic-success">· {roll.indexed_count.toLocaleString()} indexed</span>
           )}
         </div>
       </div>

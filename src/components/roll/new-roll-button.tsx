@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useTransition } from 'react'
+import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createRoll } from '@/actions/rolls'
 
@@ -11,11 +11,13 @@ export function NewRollButton() {
   const nameRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
+  useEffect(() => {
+    if (open) nameRef.current?.focus()
+  }, [open])
+
   function handleOpen() {
     setOpen(true)
     setError(null)
-    // Focus name input after mount
-    requestAnimationFrame(() => nameRef.current?.focus())
   }
 
   function handleCancel() {
@@ -36,9 +38,9 @@ export function NewRollButton() {
 
     startTransition(async () => {
       try {
-        const roll = await createRoll(name, description || undefined)
+        await createRoll(name, description || undefined)
         setOpen(false)
-        router.push(`/rolls/${roll.id}`)
+        router.refresh()
       } catch {
         setError('Failed to create roll. Please try again.')
       }

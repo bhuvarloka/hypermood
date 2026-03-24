@@ -220,7 +220,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 > **`plan/frontend.md` is the source of truth for every visual and interaction decision in this phase.** Read it in full before starting any task. Tasks below are derived from it — if there is ever a conflict, `frontend.md` wins.
 
-### Task 17 — Design system foundation
+### Task 17 — Design system foundation ✅
 
 **Read:** `plan/frontend.md` §Design System
 **Do:** Wire up the full design system before any screen is built. Everything downstream depends on this being correct.
@@ -243,7 +243,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 **Output:** `pnpm dev` shows no visual regressions. Tailwind palette, fonts, animation utilities, and focus rings are available globally. Confirmed by visually checking a test page with each color, font, and animation class.
 
-### Task 18 — Login page (The Dark Void)
+### Task 18 — Login page (The Dark Void) ✅
 
 **Read:** `plan/frontend.md` §Login
 **Do:** Build `(auth)/login/page.tsx` with full design fidelity — this is the threshold, the only fully dark screen.
@@ -252,11 +252,12 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 - `"Hypermood"` in `text-5xl tracking-tight text-white font-sans`. Centered.
 - A single email input. A single submit button. No labels, no supporting copy, no decorative elements. Absolute silence.
 - Input and button: `rounded-none` (sharp, like everything else). White text on dark. Focus ring: `focus:ring-2 focus:ring-white` (inverted from app default because background is dark).
-- OTP verification flow from Task 4. After successful login, redirect to `/rolls`.
+- OTP code step: 6 individual digit boxes (`w-12 h-14 bg-primary-900`, `border-primary-800`). Paste-aware — paste a code fills all 6 boxes and auto-submits instantly. Typing auto-advances focus. Backspace retreats. Auto-submits when all 6 digits are filled (no submit button on code step). Error state turns all borders `border-semantic-alert`. Focus transitions to `border-white`. The step shows `"Code sent to [email]"` in `text-base font-mono text-primary-200`. A ghost `"Use a different email"` link resets to the email step.
+- After successful verification, redirect to `/rolls`.
 
-**Output:** Login screen matches the dark void spec. Functional OTP auth. No light backgrounds, no shadows, no decorative chrome.
+**Output:** Login screen matches the dark void spec. Functional OTP auth with segmented digit input. No light backgrounds, no shadows, no decorative chrome.
 
-### Task 19 — App layout shell + The Rail
+### Task 19 — App layout shell + The Rail ✅
 
 **Read:** `plan/frontend.md` §The Rail
 **Do:** Build the authenticated app layout `(app)/layout.tsx` with The Rail.
@@ -265,13 +266,13 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 - Sits silently on the left, flush with the canvas. No border, no shadow, no panel background that differs from the page — it blends into the white canvas.
 - Roll names listed directly in `text-lg`. No icons, no category headers, no indentation hierarchy.
 - **Hover micro-preview:** Hovering a Roll name triggers a 2×2 grid of mini thumbnails that appears with `.animate-bloom`. This is a glimpse, not a tooltip — it feels like the roll breathing. Use ImageKit thumbnail transforms for the 4 thumbnails. The micro-preview disappears instantly on mouse-leave (no delay).
-- The hover state itself on the roll name uses `.animate-swiss` — a subtle `bg-primary-50` shift, nothing more.
+- The hover state itself on the roll name uses `.animate-swiss` — a subtle `bg-primary-100` shift (per design system: `primary-100` is for button/row hover states), nothing more.
 - User avatar at the bottom with logout. Monospace email or name label, `text-base font-mono`.
 - Content area fills the remaining viewport on pure white (`bg-white`). No inner padding on the layout shell — each page controls its own spacing.
 
 **Output:** Navigable app shell. Rail is visually invisible as a "menu." Micro-preview blooms on hover. Keyboard focus navigable through roll list.
 
-### Task 20 — Roll list + create
+### Task 20 — Roll list + create ✅
 
 **Read:** `plan/frontend.md`
 **Do:** Build the `/rolls` dashboard page.
@@ -279,7 +280,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 - Roll rows, not cards. No `border`, no `rounded`, no `shadow`. Each roll occupies a full-width row with a `hover:bg-primary-50` shift (`.animate-swiss`). Depth through background, never borders.
 - Each row: 2×2 thumbnail mosaic (ImageKit transforms, `rounded-none`, `gap-1`) on the left. Roll name in `text-3xl font-medium` beside it. Image count and indexing progress in `text-base font-mono` below the name (e.g., `"142 images · 138 indexed"`).
 - Stats row at the very top of the page: total rolls, total images, total indexed — all in `text-base font-mono`. No labels boxed or badged — plain mono text.
-- **"New Roll" creation:** An inline reveal — no modal, no route change. Clicking "New Roll" (a ghost-style button, `text-base font-medium`, no fill) expands an inline input field with `rounded-none` sharp edges directly in the list. Press Enter or blur to confirm. Calls `createRoll` Server Action. On success, the new roll appears in the list with `.animate-bloom`.
+- **"New Roll" creation:** An inline reveal — no modal, no route change. Clicking "New Roll" (a ghost-style button, `text-base font-medium`, no fill — ghost here means no background fill; a subtle `border border-primary-200` is acceptable) expands an inline input field with `rounded-none` sharp edges directly in the list. Press Enter or blur to confirm. Calls `createRoll` Server Action. On success, call `router.refresh()` and collapse the form — the list re-renders with the new roll in place. The new roll appears with `.animate-bloom`.
 - No muted text anywhere. If something is secondary, make it smaller or mono — not gray.
 
 **Output:** Can create and browse rolls. Zero boxed cards. Inline creation works. Indexing progress visible in mono font.
@@ -472,7 +473,7 @@ Images served via ImageKit with responsive transforms and `srcset`. Aggressive c
 
 ## Phase 6: Polish
 
-### Task 29 — Error handling + edge cases
+### Task 31 — Error handling + edge cases
 
 **Do:** Audit all Server Actions and Inngest functions for error handling:
 
@@ -484,12 +485,12 @@ Images served via ImageKit with responsive transforms and `srcset`. Aggressive c
 - Image deleted while gallery references it (handle gracefully in gallery view)
 **Output:** No unhandled error states.
 
-### Task 30 — Indexing status + retry mechanism
+### Task 32 — Indexing status + retry mechanism
 
 **Do:** On the roll detail page, show indexing status summary (X indexed, Y pending, Z failed) in `text-base font-mono` near the chat. For failed images, provide a "Retry" button that re-sends `indexing/process.image` events for failed images. Update status back to `pending` on retry.
 **Output:** Users can recover from indexing failures.
 
-### Task 31 — Performance optimization
+### Task 33 — Performance optimization
 
 **Do:** Add thumbnail transforms to all grid/masonry views (e.g., w-400, q-80). Add pagination or infinite scroll to image grids (don't load 1000 images at once). Add `loading.tsx` skeletons for roll and gallery pages. Ensure vector search uses the HNSW index (verify with `EXPLAIN ANALYZE`).
 **Output:** App feels fast at 1000-image scale.
@@ -498,7 +499,7 @@ Images served via ImageKit with responsive transforms and `srcset`. Aggressive c
 
 ## Phase 7: Future Features (post-MVP)
 
-### Task 32 — Narrative curation mode
+### Task 34 — Narrative curation mode
 
 **Concept:** Instead of "find images matching X," the user says "create a sad story from my images" or "build a joyful narrative using my outdoor shots." The system doesn't just retrieve — it curates and sequences images into a coherent visual narrative with an emotional arc.
 

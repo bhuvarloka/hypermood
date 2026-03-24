@@ -16,7 +16,7 @@ type Props = {
 
 export function Rail({ rolls, thumbnails, userEmail }: Props) {
   return (
-    <nav className="flex flex-col h-full w-56 shrink-0">
+    <nav className="flex flex-col h-full w-56 shrink-0 bg-white">
       <div className="flex-1 overflow-y-auto py-8 px-5">
         <Link
           href="/rolls"
@@ -67,6 +67,8 @@ function RailRollItem({
     >
       <Link
         href={`/rolls/${roll.id}`}
+        onFocus={() => setShowPreview(true)}
+        onBlur={() => setShowPreview(false)}
         className={`block text-lg text-primary-900 py-1 -mx-2 px-2 animate-swiss hover:bg-primary-100 truncate ${
           isActive ? 'font-medium' : ''
         }`}

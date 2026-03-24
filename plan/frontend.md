@@ -229,8 +229,18 @@ Pure, uninterrupted content for external viewers. No sidebar, no chat engine.
 
 **The Dark Void.**
 - Full viewport, warm black (`primary-950`).
-- "Hypermood" in `text-5xl text-white`.
-- A single input. A single action. Absolute silence.
+- "Hypermood" in `text-5xl tracking-tight text-white font-sans`. Centered.
+- **Step 1 — Email:** A single `rounded-none` email input, a single "Continue" button. No labels, no supporting copy. Absolute silence.
+- **Step 2 — OTP code:** 6 individual digit boxes (`w-12 h-14`, `bg-primary-900`, `border-primary-800`). This is the segmented input (`OtpBoxes` component in `(auth)/login/page.tsx`):
+  - **Paste:** intercepts clipboard, distributes digits across all 6 boxes instantly, auto-submits if all 6 are filled.
+  - **Typing:** auto-advances focus to the next box on each digit.
+  - **Backspace:** clears the current digit, or retreats to the previous box if already empty.
+  - **Auto-submit:** fires `verifyOtp` the moment all 6 digits are present — no submit button on this step.
+  - **Error state:** all box borders shift to `border-semantic-alert`.
+  - **Focus state:** focused box border shifts to `border-white` (via `focus:border-white`).
+  - Context line above boxes: `"Code sent to [email]"` in `text-base font-mono text-primary-200`.
+  - Ghost link below: `"Use a different email"` in `text-sm font-mono text-primary-800 hover:text-white`. Resets to Step 1.
+- Focus ring inverted from app default: `focus:ring-2 focus:ring-white` (background is dark).
 
 ---
 

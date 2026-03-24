@@ -45,7 +45,7 @@ Swiss-minimal. Warm zinc grayscale. The images and chat are kings — everything
 | `plan/stack.md`        | Full tech stack table, SDK list, gotchas for every technology                                                                                                                                                                                                                 |
 | `plan/setup.md`        | Step-by-step manual setup (Supabase, Auth, Google AI, ImageKit, Inngest, env vars, verification)                                                                                                                                                                              |
 | `plan/frontend.md`     | Complete design system (colors, typography, spacing, motion), all screen specs (Rail, Command Center, Upload, Image Detail, Settings, Public Gallery, Login), selection flow, dimming behavior, preview panel, suggestions, follow-ups, stream of thought, actionable filters |
-| `plan/tasks.md`        | All implementation tasks (1–31 + future Task 32). Tasks 1–16 are complete. Tasks 17–31 are frontend + UX patterns. Task 32 is future narrative curation.                                                                                                                      |
+| `plan/tasks.md`        | All implementation tasks. Tasks 1–18 complete. Tasks 19–30 are remaining frontend + UX patterns. Tasks 31–33 are polish. Task 34 is future narrative curation.                                                                                                                |
 | `plan/prompt.md`       | The vision indexing prompt (Task 7) — system prompt, user prompt, generation config                                                                                                                                                                                           |
 | `plan/structure.md`    | Folder layout, naming conventions, code style rules, anti-patterns                                                                                                                                                                                                            |
 | `plan/dev.md`          | Dev setup commands, running locally, build, lint, type check                                                                                                                                                                                                                  |
@@ -54,9 +54,11 @@ Swiss-minimal. Warm zinc grayscale. The images and chat are kings — everything
 
 ## Current Progress
 
-**Tasks 1–16: COMPLETE** — Project scaffold, DB schema + RLS, Supabase clients, Auth OTP, ImageKit upload, EXIF extraction, Gemini vision indexing, Gemini embeddings, Inngest pipeline (index-image + index-roll fan-out), upload Server Action, query interpreter, query executor, image-as-prompt search, chat Server Action, gallery CRUD.
+**Tasks 1–16: COMPLETE** — Project scaffold, DB schema + RLS (with explicit Postgres GRANTs for `anon`/`authenticated` roles), Supabase clients, Auth OTP, ImageKit upload, EXIF extraction, Gemini vision indexing, Gemini embeddings, Inngest pipeline (index-image + index-roll fan-out), upload Server Action, query interpreter, query executor, image-as-prompt search, chat Server Action, gallery CRUD.
 
-**Tasks 17–31: NOT STARTED** — All frontend. Starting with Task 17 (The Rail / app shell).
+**Tasks 17–20: COMPLETE** — Design system (Tailwind v4 `@theme`, fonts, `.animate-bloom`, `.animate-swiss`). Login page: dark void (`bg-primary-950`), two-step OTP flow with a segmented 6-box digit input (`OtpBoxes` component) — paste-aware, auto-advances, auto-submits on completion, border error state. Next.js 16 route protection via `proxy.ts` (not middleware). App layout shell: `flex h-screen`, flush Rail (`w-56`, no border/shadow), micro-preview on hover (`.animate-bloom`, 2×2 grid, `pl-2` gap in hover zone). Roll list: full-width rows with `hover:bg-primary-50`, 2×2 thumbnail mosaic, `text-3xl font-medium` name, mono stats. Inline "New Roll" creation with `.animate-bloom` expand.
+
+**Tasks 21–30: NOT STARTED** — All remaining frontend. Next: Task 21 (ambient drag-and-drop upload).
 
 ## Key UX Patterns (from Shape of AI analysis)
 
@@ -74,7 +76,7 @@ Click images in grid → thumbnails appear in chat input strip with count → ty
 
 ## Future Features (documented, not built)
 
-- **Task 32: Narrative curation** — "create a sad story from my images" — LLM sequences selected images into a narrative arc using stored descriptions
+- **Task 34: Narrative curation** — "create a sad story from my images" — LLM sequences selected images into a narrative arc using stored descriptions
 - **Domain layers** — specialized metadata extraction for specific use cases (scientific, fashion)
 - **Telegram/QR upload** — external contributors uploading to shared rolls
 - **Pluggable models** — swap vision/embedding models per roll

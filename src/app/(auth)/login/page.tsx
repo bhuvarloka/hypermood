@@ -1,13 +1,88 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+function OtpBoxes({ onComplete, loading, error }: {
+  onComplete: (code: string) => void
+  loading: boolean
+  error: string | null
+}) {
+  const [digits, setDigits] = useState<string[]>(Array(6).fill(''))
+  const refs = useRef<(HTMLInputElement | null)[]>([])
+
+  function handleChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, '').slice(-1)
+    const next = [...digits]
+    next[index] = digit
+    setDigits(next)
+
+    if (digit && index < 5) {
+      refs.current[index + 1]?.focus()
+    }
+
+    if (next.every(Boolean)) {
+      onComplete(next.join(''))
+    }
+  }
+
+  function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace') {
+      if (digits[index]) {
+        const next = [...digits]
+        next[index] = ''
+        setDigits(next)
+      } else if (index > 0) {
+        refs.current[index - 1]?.focus()
+      }
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!pasted) return
+
+    const next = Array(6).fill('')
+    for (let i = 0; i < pasted.length; i++) next[i] = pasted[i]
+    setDigits(next)
+
+    const lastFilled = Math.min(pasted.length, 5)
+    refs.current[lastFilled]?.focus()
+
+    if (pasted.length === 6) {
+      onComplete(pasted)
+    }
+  }
+
+  return (
+    <div className="flex gap-2" onPaste={handlePaste}>
+      {digits.map((digit, i) => (
+        <input
+          key={i}
+          ref={(el) => { refs.current[i] = el }}
+          type="text"
+          inputMode="numeric"
+          value={digit}
+          maxLength={1}
+          autoFocus={i === 0}
+          autoComplete={i === 0 ? 'one-time-code' : 'off'}
+          disabled={loading}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          className={`w-12 h-14 text-center text-xl font-mono bg-primary-900 border text-white rounded-none focus:outline-none animate-swiss disabled:opacity-40 ${
+            error ? 'border-semantic-alert' : 'border-primary-800 focus:border-white'
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
 
 function LoginForm() {
   const router = useRouter()
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -32,8 +107,7 @@ function LoginForm() {
     setLoading(false)
   }
 
-  async function handleCodeSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleCodeComplete(code: string) {
     setLoading(true)
     setError(null)
 
@@ -46,11 +120,10 @@ function LoginForm() {
 
     if (error) {
       setError(error.message)
+      setLoading(false)
     } else {
       router.push('/rolls')
     }
-
-    setLoading(false)
   }
 
   return (
@@ -69,7 +142,7 @@ function LoginForm() {
             required
             placeholder="your@email.com"
             autoComplete="email"
-            className="bg-transparent border border-primary-800 text-white text-lg px-4 py-3 rounded-none placeholder:text-primary-800 focus:outline-none focus:ring-2 focus:ring-white animate-swiss"
+            className="bg-transparent border border-primary-800 text-white text-lg px-4 py-3 rounded-none placeholder:text-primary-800 focus:outline-none focus:border-white animate-swiss"
           />
           <button
             type="submit"
@@ -80,40 +153,25 @@ function LoginForm() {
           </button>
         </form>
       ) : (
-        <form onSubmit={handleCodeSubmit} className="flex flex-col gap-3 w-full max-w-xs">
-          <p className="text-base font-mono text-primary-200 mb-1">
+        <div className="flex flex-col gap-4 items-start">
+          <p className="text-base font-mono text-primary-200">
             Code sent to {email}
           </p>
+          <OtpBoxes onComplete={handleCodeComplete} loading={loading} error={error} />
           {error && (
             <p className="text-base font-mono text-semantic-alert">{error}</p>
           )}
-          <input
-            type="text"
-            inputMode="numeric"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            required
-            placeholder="000000"
-            maxLength={6}
-            autoComplete="one-time-code"
-            autoFocus
-            className="bg-transparent border border-primary-800 text-white text-lg px-4 py-3 rounded-none placeholder:text-primary-800 focus:outline-none focus:ring-2 focus:ring-white animate-swiss tracking-widest"
-          />
-          <button
-            type="submit"
-            disabled={loading || code.length < 6}
-            className="text-base font-medium text-primary-950 bg-white px-4 py-3 rounded-none animate-swiss hover:opacity-90 disabled:opacity-40"
-          >
-            {loading ? 'Verifying…' : 'Sign in'}
-          </button>
+          {loading && (
+            <p className="text-base font-mono text-primary-200">Verifying…</p>
+          )}
           <button
             type="button"
-            onClick={() => { setStep('email'); setCode(''); setError(null) }}
-            className="text-base font-mono text-primary-200 animate-swiss hover:text-white"
+            onClick={() => { setStep('email'); setError(null) }}
+            className="text-sm font-mono text-primary-800 animate-swiss hover:text-white mt-2"
           >
             Use a different email
           </button>
-        </form>
+        </div>
       )}
     </>
   )
