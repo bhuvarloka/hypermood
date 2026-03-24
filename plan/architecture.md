@@ -11,7 +11,7 @@ User uploads images
   → Job calls Gemini 3.1 Flash-Lite (vision) → structured metadata extracted
   → Job calls Gemini Embedding 2 → multimodal vector generated
   → Both written to Supabase (status: indexed)
-  → Progress broadcast to UI via Inngest events
+  → Progress broadcast to UI via Supabase Realtime (images.status subscription)
 
 PHASE 2: QUERY
 User types natural language in chat (per-roll, persistent history)
@@ -137,6 +137,14 @@ The query interpreter prompt (Gemini Flash) is extended to return `suggested_fol
 **Migration approach (do not build, document only):** When switching embedding models: (1) add new vector column, (2) run Inngest batch job to re-embed all images, (3) swap query logic to use new column, (4) drop old column. Never mix vectors from different models in the same search.
 **Dimension flexibility:** Gemini Embedding 2 supports Matryoshka Representation Learning (MRL). Default output is 3072 dimensions. Can be truncated to 768 or 1536 via the `output_dimensionality` parameter without re-embedding, trading minimal quality for storage savings. Start with 3072 for MVP.
 **Consequence:** Re-embedding 1000 images is ~$0.02 and ~10 minutes. Acceptable cost for model migration.
+
+### ADR-007: Supabase Realtime for indexing progress and chat sync
+
+**Decision:** Enable Realtime on `images` and `chat_messages` tables only.
+**Rationale:** Indexing progress is the first user impression — polling at 1s intervals per user during upload is wasteful and produces choppy UX. Realtime broadcasts status changes ~50ms after Inngest writes them. Chat sync enables seamless multi-tab usage at no extra cost.
+**What NOT to Realtime:** `image_metadata` and `image_embeddings` (written once, never modified). Rolls list (aggregates don't broadcast). Public gallery pages (immutable, no auth).
+**Implementation note:** `REPLICA IDENTITY FULL` is required on both tables so UPDATE payloads carry changed columns. Tables must be added to the `supabase_realtime` publication.
+**Frontend pattern:** Browser Supabase client subscribes in `useEffect`; server client cannot subscribe. Always unsubscribe on component unmount.
 
 ### ADR-004: pgvector in Supabase (not a dedicated vector DB)
 

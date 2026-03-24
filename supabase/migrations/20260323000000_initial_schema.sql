@@ -255,3 +255,15 @@ BEGIN
   );
 END;
 $$;
+
+-- ============================================================
+-- REALTIME
+-- ============================================================
+
+-- FULL replica identity so UPDATE payloads include changed columns (e.g. status).
+ALTER TABLE images        REPLICA IDENTITY FULL;
+ALTER TABLE chat_messages REPLICA IDENTITY FULL;
+
+-- Add tables to the realtime publication.
+ALTER PUBLICATION supabase_realtime ADD TABLE images;
+ALTER PUBLICATION supabase_realtime ADD TABLE chat_messages;

@@ -134,6 +134,15 @@ plan/testing.md
   • What to test (critical paths, edge cases, integration points).
   • What NOT to test (and why — avoid over-testing boilerplate).
   • How to run the test suite locally.
+  • Philosophy: tests must challenge the code to catch bugs, not confirm existing behavior.
+    Test the transformation, not the transport — skip framework internals (routing, SDK behavior,
+    rendering); test only the logic you own (parsing, validation, SQL clause building, vector math).
+  • File structure: all test files live in tests/unit/ and tests/integration/ at the project root.
+    Zero *.test.ts files inside src/.
+  • Code structure: a file that mixes I/O with pure logic has two jobs. Split it — not for testing,
+    but because one file should do one thing. Pure logic (validation, math, parsing, transformation)
+    goes into its own file; the orchestration file delegates to it. Tests then import the pure file
+    directly. Nothing is created solely for tests — every file ships because production code uses it.
 
 plan/dev.md
   • How to install dependencies.

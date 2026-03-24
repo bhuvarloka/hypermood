@@ -1,53 +1,11 @@
-import { ai, tryParseJson, asRecord } from './parse-utils'
+import { ai, tryParseJson } from './parse-utils'
+import { validateQueryPlan, DEFAULT_PLAN } from './query.validate'
 import type { ChatMessage } from '@/types/domain'
 
 const QUERY_MODEL = process.env.GEMINI_QUERY_MODEL ?? 'gemini-3-flash-preview'
 
-// -- Types --
-
-export type FilterOperator =
-  | 'eq'        // exact match
-  | 'neq'       // not equal
-  | 'contains'  // array contains / string substring
-  | 'gte'       // >=
-  | 'lte'       // <=
-  | 'gt'        // >
-  | 'lt'        // <
-  | 'in'        // value is one of an array of options
-
-export type QueryFilter = {
-  field: string
-  operator: FilterOperator
-  value: unknown
-}
-
-export type QuerySort = {
-  field: string
-  direction: 'asc' | 'desc'
-}
-
-// Task 12 specifies a 4-field QueryPlan. clarification_note is an extension
-// added here to surface ambiguous-query explanations to the chat UI without
-// a separate response field — it is null for normal search queries.
-export type QueryPlan = {
-  filters: QueryFilter[]
-  semantic_search: string | null
-  sort: QuerySort | null
-  limit: number
-  clarification_note: string | null
-}
-
-// -- Default plan --
-
-const DEFAULT_PLAN: QueryPlan = {
-  filters: [],
-  semantic_search: null,
-  sort: null,
-  limit: 50,
-  clarification_note: null,
-}
-
-// -- Prompts --
+// Re-export types so existing imports from '@/lib/gemini/query' continue to work.
+export type { FilterOperator, QueryFilter, QuerySort, QueryPlan } from './query.validate'
 
 const SYSTEM_PROMPT = `You are a query interpreter for a semantic image search engine. Your job is to translate natural language queries into a structured JSON query plan that the system will use to filter and rank images.
 
@@ -157,47 +115,6 @@ Return a JSON object with exactly this structure:
   "clarification_note": "explanation if query is ambiguous or non-search, else null"
 }`
 }
-
-// -- Validation --
-
-const VALID_OPERATORS: readonly FilterOperator[] = ['eq', 'neq', 'contains', 'gte', 'lte', 'gt', 'lt', 'in']
-
-function validateQueryPlan(raw: unknown): QueryPlan {
-  const data = asRecord(raw)
-  if (!data) return { ...DEFAULT_PLAN }
-
-  const filters: QueryFilter[] = []
-  if (Array.isArray(data.filters)) {
-    for (const item of data.filters) {
-      const f = asRecord(item)
-      if (!f || typeof f.field !== 'string' || f.field.length === 0) continue
-      if (!VALID_OPERATORS.includes(f.operator as FilterOperator)) continue
-      filters.push({ field: f.field, operator: f.operator as FilterOperator, value: f.value })
-    }
-  }
-
-  const semanticSearch = typeof data.semantic_search === 'string' && data.semantic_search.trim().length > 0
-    ? data.semantic_search.trim()
-    : null
-
-  let sort: QuerySort | null = null
-  const sortRaw = asRecord(data.sort)
-  if (sortRaw && typeof sortRaw.field === 'string' && (sortRaw.direction === 'asc' || sortRaw.direction === 'desc')) {
-    sort = { field: sortRaw.field, direction: sortRaw.direction }
-  }
-
-  const limit = typeof data.limit === 'number' && Number.isFinite(data.limit)
-    ? Math.min(200, Math.max(1, Math.round(data.limit)))
-    : 50
-
-  const clarificationNote = typeof data.clarification_note === 'string' && data.clarification_note.trim().length > 0
-    ? data.clarification_note.trim()
-    : null
-
-  return { filters, semantic_search: semanticSearch, sort, limit, clarification_note: clarificationNote }
-}
-
-// -- Public API --
 
 export async function interpretQuery(
   query: string,

@@ -320,7 +320,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 **Do:** Backend support for contextual starter suggestions on each roll.
 
-1. Run migration: `ALTER TABLE rolls ADD COLUMN suggestions jsonb;`
+1. Run this SQL in Supabase SQL editor: `ALTER TABLE rolls ADD COLUMN suggestions jsonb;`
 2. Create a `generateRollSuggestions` utility in `lib/suggestions.ts` that runs SQL aggregations on `image_metadata` for a roll: count by `scene.setting`, `people.count` ranges, top tags, `quality_score` distribution, `time_of_day` spread. From these stats, generate 3-4 natural-language starter suggestions. This is template-based, not an LLM call.
 3. Create an Inngest function `generate-roll-suggestions` triggered by `indexing/complete.roll` event (fire this event at the end of `index-roll` fan-out when all images are indexed). Writes suggestions to `rolls.suggestions`.
 4. On re-index, regenerate suggestions.

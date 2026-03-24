@@ -6,7 +6,6 @@ export function tryParseJson(raw: string): unknown | null {
   try {
     return JSON.parse(raw)
   } catch {
-    // Attempt repair: trim, strip markdown fences, remove control chars
     const cleaned = raw
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
@@ -23,7 +22,6 @@ export function tryParseJson(raw: string): unknown | null {
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null
-    ? (value as Record<string, unknown>)
-    : null
+  if (Array.isArray(value) || typeof value !== 'object' || value === null) return null
+  return value as Record<string, unknown>
 }
