@@ -51,6 +51,7 @@ export function validateQueryPlan(raw: unknown): QueryPlan {
       const f = asRecord(item)
       if (!f || typeof f.field !== 'string' || f.field.length === 0) continue
       if (!VALID_OPERATORS.includes(f.operator as FilterOperator)) continue
+      if (!('value' in f)) continue
       filters.push({ field: f.field, operator: f.operator as FilterOperator, value: f.value })
     }
   }
@@ -61,7 +62,7 @@ export function validateQueryPlan(raw: unknown): QueryPlan {
 
   let sort: QuerySort | null = null
   const sortRaw = asRecord(data.sort)
-  if (sortRaw && typeof sortRaw.field === 'string' && (sortRaw.direction === 'asc' || sortRaw.direction === 'desc')) {
+  if (sortRaw && typeof sortRaw.field === 'string' && sortRaw.field.length > 0 && (sortRaw.direction === 'asc' || sortRaw.direction === 'desc')) {
     sort = { field: sortRaw.field, direction: sortRaw.direction }
   }
 

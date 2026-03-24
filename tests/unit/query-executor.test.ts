@@ -62,14 +62,21 @@ describe('buildClause — scalar contains', () => {
     expect(clause).toContain('@>')
     expect(clause).toContain('"sunset"')
   })
+
+  it('builds ilike clause for nested scalar field with contains', () => {
+    const f: QueryFilter = { field: 'scene.environment', operator: 'contains', value: 'forest' }
+    const clause = buildClause(f)
+    expect(clause).toContain('ilike')
+    expect(clause).toContain('%forest%')
+    expect(clause).toContain("metadata->'scene'->>'environment'")
+  })
 })
 
 describe('buildClause — equality operators', () => {
   it('builds = clause for scene.setting eq indoor', () => {
     const f: QueryFilter = { field: 'scene.setting', operator: 'eq', value: 'indoor' }
     const clause = buildClause(f)
-    expect(clause).toContain("= 'indoor'")
-    expect(clause).toContain("metadata->'scene'->>'setting'")
+    expect(clause).toBe("(im.metadata->'scene'->>'setting' = 'indoor')")
   })
 
   it('escapes single quotes in eq value', () => {
@@ -84,10 +91,9 @@ describe('buildClause — equality operators', () => {
     expect(buildClause(f)).toContain('!=')
   })
 
-  it('builds = clause for single-segment field quality_score', () => {
+  it('builds exact clause for single-segment field quality_score', () => {
     const f: QueryFilter = { field: 'quality_score', operator: 'eq', value: '0.9' }
-    const clause = buildClause(f)
-    expect(clause).toContain("metadata->>'quality_score'")
+    expect(buildClause(f)).toBe("(im.metadata->>'quality_score' = '0.9')")
   })
 })
 
@@ -171,6 +177,24 @@ describe('matchesFilter — eq', () => {
   })
 })
 
+describe('matchesFilter — neq', () => {
+  it('returns true when actual does not equal value', () => {
+    const f: QueryFilter = { field: 'scene.setting', operator: 'neq', value: 'indoor' }
+    expect(matchesFilter({ scene: { setting: 'outdoor' } }, f)).toBe(true)
+  })
+
+  it('returns false when actual equals value', () => {
+    const f: QueryFilter = { field: 'scene.setting', operator: 'neq', value: 'indoor' }
+    expect(matchesFilter({ scene: { setting: 'indoor' } }, f)).toBe(false)
+  })
+
+  // neq uses != (loose inequality) — mirrors eq loose == semantics
+  it('loose inequality: number 0 neq string "0" is false', () => {
+    const f: QueryFilter = { field: 'people.count', operator: 'neq', value: '0' }
+    expect(matchesFilter({ people: { count: 0 } }, f)).toBe(false)
+  })
+})
+
 describe('matchesFilter — contains on string', () => {
   it('matches case-insensitive substring', () => {
     const f: QueryFilter = { field: 'description', operator: 'contains', value: 'beach' }
@@ -237,6 +261,11 @@ describe('matchesFilter — in operator', () => {
     const f: QueryFilter = { field: 'scene.setting', operator: 'in', value: ['indoor', 'outdoor'] }
     expect(matchesFilter({ scene: { setting: 'mixed' } }, f)).toBe(false)
   })
+
+  it('returns false when value is not an array', () => {
+    const f: QueryFilter = { field: 'scene.setting', operator: 'in', value: 'indoor' }
+    expect(matchesFilter({ scene: { setting: 'indoor' } }, f)).toBe(false)
+  })
 })
 
 describe('matchesFilter — array-element filter', () => {
@@ -260,6 +289,25 @@ describe('matchesFilter — array-element filter', () => {
   it('pass-through true for non-contains operator on array-element field', () => {
     const f: QueryFilter = { field: 'objects[].label', operator: 'eq', value: 'cat' }
     expect(matchesFilter({ objects: [{ label: 'dog' }] }, f)).toBe(true)
+  })
+
+  it('array-element match uses strict equality — "Cat" does not match filter "cat"', () => {
+    // matchesFilter uses === for array-element leaf comparison; SQL @> is also case-sensitive.
+    // Both agree: neither matches a differently-cased value.
+    const f: QueryFilter = { field: 'objects[].label', operator: 'contains', value: 'cat' }
+    expect(matchesFilter({ objects: [{ label: 'Cat' }] }, f)).toBe(false)
+  })
+})
+
+describe('matchesFilter — numeric operator on missing field', () => {
+  it('gte on a missing field returns false (Number(undefined) is NaN)', () => {
+    const f: QueryFilter = { field: 'mood.energy_level', operator: 'gte', value: 0.5 }
+    expect(matchesFilter({ mood: {} }, f)).toBe(false)
+  })
+
+  it('lte on a missing field returns false', () => {
+    const f: QueryFilter = { field: 'quality_score', operator: 'lte', value: 1.0 }
+    expect(matchesFilter({}, f)).toBe(false)
   })
 })
 

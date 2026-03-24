@@ -22,6 +22,11 @@ describe('getImageUrl', () => {
     expect(() => getImageUrl('photo.jpg')).toThrow('NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT is not configured')
   })
 
+  it('throws when NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT env var is absent (undefined)', () => {
+    vi.stubEnv('NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT', undefined as unknown as string)
+    expect(() => getImageUrl('photo.jpg')).toThrow('NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT is not configured')
+  })
+
   it('calls buildSrc with transformation: undefined when no transforms given', () => {
     vi.stubEnv('NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT', 'https://ik.imagekit.io/demo')
     getImageUrl('photo.jpg')
@@ -55,6 +60,14 @@ describe('getImageUrl', () => {
     getImageUrl('rolls/abc/photo.jpg')
     expect(mockBuildSrc).toHaveBeenCalledWith(
       expect.objectContaining({ src: 'rolls/abc/photo.jpg' }),
+    )
+  })
+
+  it('passes the correct urlEndpoint to buildSrc', () => {
+    vi.stubEnv('NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT', 'https://ik.imagekit.io/demo')
+    getImageUrl('photo.jpg')
+    expect(mockBuildSrc).toHaveBeenCalledWith(
+      expect.objectContaining({ urlEndpoint: 'https://ik.imagekit.io/demo' }),
     )
   })
 

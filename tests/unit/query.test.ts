@@ -52,6 +52,28 @@ describe('validateQueryPlan', () => {
       const result = validateQueryPlan({ filters })
       expect(result.filters).toHaveLength(2)
     })
+
+    it('drops invalid filters but preserves valid ones in a mixed array', () => {
+      const filters = [
+        { field: 'tags', operator: 'contains', value: 'beach' },
+        { field: 'tags', operator: 'like', value: 'beach' }, // invalid operator
+        { field: 'scene.setting', operator: 'eq', value: 'outdoor' },
+      ]
+      const result = validateQueryPlan({ filters })
+      expect(result.filters).toHaveLength(2)
+      expect(result.filters[0].field).toBe('tags')
+      expect(result.filters[1].field).toBe('scene.setting')
+    })
+
+    it('filter with missing field key is dropped', () => {
+      const result = validateQueryPlan({ filters: [{ operator: 'eq', value: 'x' }] })
+      expect(result.filters).toHaveLength(0)
+    })
+
+    it('filter missing value key is dropped', () => {
+      const result = validateQueryPlan({ filters: [{ field: 'tags', operator: 'contains' }] })
+      expect(result.filters).toHaveLength(0)
+    })
   })
 
   describe('semantic_search', () => {
@@ -79,6 +101,10 @@ describe('validateQueryPlan', () => {
 
     it('clamps limit below 1 to 1', () => {
       expect(validateQueryPlan({ limit: 0 }).limit).toBe(1)
+    })
+
+    it('clamps negative limit to 1', () => {
+      expect(validateQueryPlan({ limit: -5 }).limit).toBe(1)
     })
 
     it('rounds fractional limit', () => {
@@ -115,6 +141,10 @@ describe('validateQueryPlan', () => {
 
     it('returns null for non-object sort', () => {
       expect(validateQueryPlan({ sort: 'uploaded_at' }).sort).toBeNull()
+    })
+
+    it('returns null for sort with empty field string', () => {
+      expect(validateQueryPlan({ sort: { field: '', direction: 'asc' } }).sort).toBeNull()
     })
   })
 

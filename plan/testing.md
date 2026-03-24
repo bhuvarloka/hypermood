@@ -30,6 +30,7 @@ Test the things that would be expensive to debug in production. Skip the things 
 - Framework: Vitest (fast, TS-native, compatible with Next.js)
 - Mocks: Mock Gemini API responses for unit tests. Use real Supabase (test project or local) for integration tests.
 - Seed data: Create a small set of pre-indexed images (5-10) with known metadata and embeddings for query testing.
+- Pure logic is extracted into `*.validate.ts` / `*.logic.ts` / `*.math.ts` siblings so tests can import without I/O or side effects. Production files import from them; no test code ever lives in `src/`.
 
 ## Running Tests
 
@@ -37,19 +38,41 @@ Test the things that would be expensive to debug in production. Skip the things 
 # Unit tests
 pnpm test
 
-# Integration tests (requires .env.local with test credentials)
+# Integration tests (requires .env.test with test credentials)
 pnpm test:integration
 
 # Watch mode
-pnpm test --watch
+pnpm test:watch
 ```
 
 ## Test File Location
 
-Colocate test files next to the module they test:
+All test files live under `tests/` at the project root — zero `*.test.ts` files inside `src/`.
+
 ```
-lib/gemini/vision.ts
-lib/gemini/vision.test.ts
-lib/imagekit/url.ts
-lib/imagekit/url.test.ts
+tests/
+  unit/
+    parse-utils.test.ts
+    vision.test.ts
+    query-executor.test.ts
+    image-search.test.ts
+    query.test.ts
+    exif.test.ts
+    url.test.ts
+  integration/
+    query-executor.integration.test.ts
+    image-search.integration.test.ts
 ```
+
+The extracted pure-logic files they test:
+```
+src/lib/gemini/vision.validate.ts
+src/lib/gemini/query-executor.logic.ts
+src/lib/gemini/image-search.math.ts
+src/lib/gemini/query.validate.ts
+src/lib/gemini/parse-utils.ts       ← already fully exported, no extraction needed
+src/lib/exif/extract.ts             ← already fully exported, no extraction needed
+src/lib/imagekit/url.ts             ← already fully exported, no extraction needed
+```
+
+For full detail on test cases, bugs identified, and infrastructure setup see `plan/plan-extensions/testing-plan.md`.

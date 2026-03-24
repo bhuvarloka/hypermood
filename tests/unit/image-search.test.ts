@@ -35,6 +35,15 @@ describe('computeCentroid', () => {
   it('all-zero vectors produce zero centroid', () => {
     expect(computeCentroid([[0, 0, 0], [0, 0, 0]])).toEqual([0, 0, 0])
   })
+
+  it('empty input array throws TypeError', () => {
+    // vectors[0].length throws when vectors is []; callers must guard against empty input
+    expect(() => computeCentroid([])).toThrow(TypeError)
+  })
+
+  it('mismatched vector dimensions throw TypeError', () => {
+    expect(() => computeCentroid([[1, 2, 3], [1, 2]])).toThrow(TypeError)
+  })
 })
 
 describe('l2Normalise', () => {
@@ -74,6 +83,10 @@ describe('l2Normalise', () => {
     const result = l2Normalise([1e-300, 1e-300])
     expect(result.every(Number.isFinite)).toBe(true)
   })
+
+  it('empty vector returns empty vector without crashing', () => {
+    expect(l2Normalise([])).toEqual([])
+  })
 })
 
 describe('blendVectors', () => {
@@ -98,5 +111,12 @@ describe('blendVectors', () => {
     const result = blendVectors([2, 4], [2, 4])
     expect(result[0]).toBeCloseTo(2)
     expect(result[1]).toBeCloseTo(4)
+  })
+
+  it('centroid shorter than textVec — extra text dimensions are silently dropped', () => {
+    // centroid has 1 dim, textVec has 3; map iterates centroid length so dims 1,2 are ignored
+    const result = blendVectors([1], [1, 1, 1])
+    expect(result).toHaveLength(1)
+    expect(result[0]).toBeCloseTo(CENTROID_WEIGHT * 1 + TEXT_WEIGHT * 1)
   })
 })

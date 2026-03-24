@@ -25,6 +25,14 @@ describe('tryParseJson', () => {
     expect(tryParseJson('```json\n{"x":1}\n```')).toEqual({ x: 1 })
   })
 
+  it('strips ```JSON fence with uppercase language tag', () => {
+    expect(tryParseJson('```JSON\n{"x":1}\n```')).toEqual({ x: 1 })
+  })
+
+  it('strips fence with leading/trailing whitespace surrounding the block', () => {
+    expect(tryParseJson('  ```json\n{"x":1}\n```  ')).toEqual({ x: 1 })
+  })
+
   it('strips ``` fence without language tag', () => {
     expect(tryParseJson('```\n{"x":1}\n```')).toEqual({ x: 1 })
   })
@@ -53,6 +61,12 @@ describe('tryParseJson', () => {
 
   it('returns null for markdown fence containing non-JSON', () => {
     expect(tryParseJson('```\nnot json\n```')).toBeNull()
+  })
+
+  it('carriage return (0x0d) is not stripped — raw CR inside a string value causes parse to fail', () => {
+    // \r is not in the control-char regex range, so it is preserved.
+    // A raw \r inside a JSON string literal is invalid and causes JSON.parse to throw.
+    expect(tryParseJson('{"a":"b\rc"}')).toBeNull()
   })
 })
 

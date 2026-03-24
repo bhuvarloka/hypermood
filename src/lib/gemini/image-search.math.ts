@@ -5,9 +5,11 @@ export const CENTROID_WEIGHT = 0.7
 export const TEXT_WEIGHT = 0.3
 
 export function computeCentroid(vectors: number[][]): number[] {
+  if (vectors.length === 0) throw new TypeError('computeCentroid requires at least one vector')
   const dim = vectors[0].length
   const sum = new Array<number>(dim).fill(0)
   for (const vec of vectors) {
+    if (vec.length !== dim) throw new TypeError(`computeCentroid requires all vectors to have the same dimension (expected ${dim}, got ${vec.length})`)
     for (let i = 0; i < dim; i++) {
       sum[i] += vec[i]
     }

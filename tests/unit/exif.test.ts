@@ -71,4 +71,25 @@ describe('extractExif', () => {
       }),
     )
   })
+
+  it('passes the exact same buffer reference to parse', async () => {
+    mockParse.mockResolvedValue(null)
+    const buf = Buffer.from([1, 2, 3])
+    await extractExif(buf)
+    expect(mockParse).toHaveBeenCalledWith(buf, expect.any(Object))
+  })
+
+  it('returns capturedAt null when DateTimeOriginal is null', async () => {
+    mockParse.mockResolvedValue({ DateTimeOriginal: null, ExifImageWidth: 4000, ExifImageHeight: 3000 })
+    const result = await extractExif(Buffer.from([]))
+    expect(result.capturedAt).toBeNull()
+    expect(result.width).toBe(4000)
+  })
+
+  it('returns width 0 when ExifImageWidth is 0 (typeof 0 === "number")', async () => {
+    mockParse.mockResolvedValue({ ExifImageWidth: 0, ExifImageHeight: 0 })
+    const result = await extractExif(Buffer.from([]))
+    expect(result.width).toBe(0)
+    expect(result.height).toBe(0)
+  })
 })

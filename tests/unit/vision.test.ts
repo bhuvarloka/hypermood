@@ -43,6 +43,23 @@ describe('detectMimeType', () => {
   it('empty buffer returns image/jpeg without crashing', () => {
     expect(detectMimeType(Buffer.alloc(0))).toBe('image/jpeg')
   })
+
+  it('1-byte buffer returns image/jpeg without crashing (boundary of < 2 guard)', () => {
+    expect(detectMimeType(Buffer.from([0x89]))).toBe('image/jpeg')
+  })
+
+  it('2-byte PNG magic returns image/png (minimum valid header)', () => {
+    expect(detectMimeType(Buffer.from([0x89, 0x50]))).toBe('image/png')
+  })
+
+  it('RIFF header without WEBP marker falls back to image/jpeg', () => {
+    const buf = Buffer.from([
+      0x52, 0x49, 0x46, 0x46, // RIFF
+      0x00, 0x00, 0x00, 0x00, // file size
+      0x00, 0x00, 0x00, 0x00, // NOT WEBP
+    ])
+    expect(detectMimeType(buf)).toBe('image/jpeg')
+  })
 })
 
 describe('validateMetadata', () => {
@@ -175,6 +192,71 @@ describe('validateMetadata', () => {
   it('falls back subject to default for empty string', () => {
     const result = validateMetadata({ subject: '' })
     expect(result.subject).toBe(DEFAULTS.subject)
+  })
+
+  it('text_content: has_text string "yes" falls back to false', () => {
+    const result = validateMetadata({ text_content: { has_text: 'yes', text_strings: [], text_role: 'none' } })
+    expect(result.text_content.has_text).toBe(false)
+  })
+
+  it('text_content: text_strings with non-string elements are filtered', () => {
+    const result = validateMetadata({ text_content: { has_text: true, text_strings: ['hello', 42, null], text_role: 'signage' } })
+    expect(result.text_content.text_strings).toEqual(['hello'])
+  })
+
+  it('text_content: null text_role falls back to default', () => {
+    const result = validateMetadata({ text_content: { has_text: false, text_strings: [], text_role: null } })
+    expect(result.text_content.text_role).toBe(DEFAULTS.text_content.text_role)
+  })
+
+  it('text_content: missing text_content uses DEFAULTS', () => {
+    const result = validateMetadata({})
+    expect(result.text_content.has_text).toBe(DEFAULTS.text_content.has_text)
+    expect(result.text_content.text_strings).toEqual(DEFAULTS.text_content.text_strings)
+    expect(result.text_content.text_role).toBe(DEFAULTS.text_content.text_role)
+  })
+
+  it('colors: null colors uses DEFAULTS for all color fields', () => {
+    const result = validateMetadata({ colors: null })
+    expect(result.colors.dominant).toEqual(DEFAULTS.colors.dominant)
+    expect(result.colors.palette_mood).toBe(DEFAULTS.colors.palette_mood)
+    expect(result.colors.dominant_color_name).toBe(DEFAULTS.colors.dominant_color_name)
+  })
+
+  it('colors: dominant with non-string elements are filtered', () => {
+    const result = validateMetadata({ colors: { dominant: ['#fff', 42, null], palette_mood: 'warm', dominant_color_name: 'white' } })
+    expect(result.colors.dominant).toEqual(['#fff'])
+  })
+
+  it('scene: null scene uses DEFAULTS for all scene fields', () => {
+    const result = validateMetadata({ scene: null })
+    expect(result.scene.environment).toBe(DEFAULTS.scene.environment)
+    expect(result.scene.setting).toBe(DEFAULTS.scene.setting)
+    expect(result.scene.time_of_day).toBe(DEFAULTS.scene.time_of_day)
+    expect(result.scene.weather).toBe(DEFAULTS.scene.weather)
+  })
+
+  it('composition: null composition uses DEFAULTS for all composition fields', () => {
+    const result = validateMetadata({ composition: null })
+    expect(result.composition.framing).toBe(DEFAULTS.composition.framing)
+    expect(result.composition.focal_point).toBe(DEFAULTS.composition.focal_point)
+  })
+
+  it('people: descriptions as a non-array falls back to empty descriptions', () => {
+    const result = validateMetadata({ people: { count: 2, descriptions: 'two people' } })
+    expect(result.people.descriptions).toEqual([])
+    // count is a valid number so it is preserved, not replaced by descriptions.length
+    expect(result.people.count).toBe(2)
+  })
+
+  it('validatePerson: clothing with non-string elements are filtered', () => {
+    const result = validateMetadata({
+      people: {
+        count: 1,
+        descriptions: [{ position: 'center', age_range: 'adult', gender_presentation: 'ambiguous', clothing: ['jeans', 42, null], activity: 'walking', expression: 'neutral' }],
+      },
+    })
+    expect(result.people.descriptions[0].clothing).toEqual(['jeans'])
   })
 
   it('passes a full valid payload through correctly', () => {
