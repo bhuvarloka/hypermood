@@ -27,6 +27,7 @@ export type QueryPlan = {
   sort: QuerySort | null
   limit: number
   clarification_note: string | null
+  followups: string[]
 }
 
 export const VALID_OPERATORS: readonly FilterOperator[] = [
@@ -39,6 +40,7 @@ export const DEFAULT_PLAN: QueryPlan = {
   sort: null,
   limit: 50,
   clarification_note: null,
+  followups: [],
 }
 
 export function validateQueryPlan(raw: unknown): QueryPlan {
@@ -74,5 +76,14 @@ export function validateQueryPlan(raw: unknown): QueryPlan {
     ? data.clarification_note.trim()
     : null
 
-  return { filters, semantic_search: semanticSearch, sort, limit, clarification_note: clarificationNote }
+  const suggestedFollowups: string[] = []
+  if (Array.isArray(data.followups)) {
+    for (const item of data.followups) {
+      if (typeof item === 'string' && item.trim().length > 0) {
+        suggestedFollowups.push(item.trim())
+      }
+    }
+  }
+
+  return { filters, semantic_search: semanticSearch, sort, limit, clarification_note: clarificationNote, followups: suggestedFollowups }
 }

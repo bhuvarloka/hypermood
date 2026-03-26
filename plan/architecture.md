@@ -7,11 +7,16 @@ PHASE 1: INGESTION
 User uploads images
   → Files sent to ImageKit (storage + CDN)
   → Metadata row created in Supabase (status: pending)
-  → Inngest job triggered per image (batched)
+  → Inngest job triggered per image (batched via index-roll fan-out)
   → Job calls Gemini 3.1 Flash-Lite (vision) → structured metadata extracted
   → Job calls Gemini Embedding 2 → multimodal vector generated
   → Both written to Supabase (status: indexed)
   → Progress broadcast to UI via Supabase Realtime (images.status subscription)
+  → After each image is indexed: check if any images for the roll are still
+    pending/indexing. When count hits 0, fire indexing/complete.roll event.
+  → indexing/complete.roll triggers generate-roll-suggestions Inngest function
+    → Aggregates image_metadata for the roll (SQL, no LLM)
+    → Writes 3-4 natural-language starters to rolls.suggestions (jsonb)
 
 PHASE 2: QUERY
 User types natural language in chat (per-roll, persistent history)
@@ -99,18 +104,21 @@ Chat history is sent to the LLM on each query (with a sliding window to respect 
 Two types of suggestions power the conversational UX:
 
 **Roll suggestions (generated once, after indexing):**
-After a roll finishes indexing (or after a significant batch completes), a lightweight server-side computation scans the indexed metadata to produce 3-4 contextual starter suggestions. This is NOT an LLM call — it's a SQL aggregation:
+After a roll finishes indexing, a lightweight server-side computation scans the indexed metadata to produce 3-4 contextual starter suggestions. This is NOT an LLM call — it's a SQL aggregation in `lib/suggestions.ts`:
 
-- Count images by `scene.setting` (indoor/outdoor split)
-- Count images by `people.count` (portraits vs groups vs no-people)
-- Extract top 5 most common tags
-- Check quality_score distribution (any high-quality cluster?)
-- Check time_of_day distribution
+- Count images by `scene.setting` (indoor/outdoor/mixed)
+- Count images by `people.count` in four buckets: none, solo (1), small group (2–4), large group (5+)
+- Extract top tags by frequency
+- Count `quality_score >= 0.7` images
+- Count images by `scene.time_of_day`
 
-From these stats, generate natural-language starters. Store them on the `rolls` table (a `suggestions` JSONB column, nullable). Regenerate on re-index.
+From these stats, `buildSuggestions` picks the most characterising phrases (e.g. `"Show me the portraits"`, `"Find the golden hour photos"`, `"Show me the best quality shots"`). Stored on `rolls.suggestions` (JSONB, nullable). Not overwritten if the new result is empty (< 3 indexed images). Regenerated on re-index.
+
+**Completion detection (how `indexing/complete.roll` is fired):**
+`index-roll.ts` is a fire-and-forget fan-out — it dispatches `indexing/process.image` events and exits immediately. Completion is detected bottom-up: after each `index-image` job sets an image to `indexed`, it queries `count(*) WHERE status IN ('pending','indexing')` for the roll. When that count hits 0, it fires `indexing/complete.roll` via `step.sendEvent`. Deduplication ID: `roll-complete-{rollId}-{Math.floor(Date.now() / 300_000)}` — a 5-minute window that collapses simultaneous last-image races to one event while allowing re-index passes minutes later.
 
 **Follow-up suggestions (generated per query):**
-The query interpreter prompt (Gemini Flash) is extended to return `suggested_followups: string[]` (2-3 items) alongside the query plan. These are contextual to the current result set and reference what just happened. Stored as part of the assistant message in `chat_messages.content` (or a separate field if preferred).
+The query interpreter prompt (Gemini Flash) is extended to return `suggested_followups: string[]` (2-3 items) alongside the query plan. These are contextual to the current result set and reference what just happened. Stored under a `followups` key in `chat_messages.interpreted_filter` JSONB. (Implemented in Task 25.)
 
 ---
 

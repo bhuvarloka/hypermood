@@ -10,6 +10,7 @@ CREATE TABLE rolls (
   user_id     uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name        text NOT NULL,
   description text,
+  suggestions jsonb,
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );

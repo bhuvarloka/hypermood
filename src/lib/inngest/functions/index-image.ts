@@ -115,6 +115,33 @@ export const indexImage = inngest.createFunction(
       if (error) throw new Error(`Failed to update status: ${error.message}`)
     })
 
+    // After marking this image indexed, check whether all images in the roll
+    // have settled (no more pending or indexing). If so, fire the roll
+    // completion event to trigger suggestion generation.
+    const isRollComplete = await step.run('check-roll-complete', async () => {
+      const supabase = createAdminClient()
+      const { count, error } = await supabase
+        .from('images')
+        .select('id', { count: 'exact', head: true })
+        .eq('roll_id', image.roll_id)
+        .in('status', ['pending', 'indexing'])
+
+      if (error) throw new Error(`Failed to check roll completion: ${error.message}`)
+      if (count === null) throw new Error(`Unexpected null count for roll ${image.roll_id}`)
+      return count === 0
+    })
+
+    if (isRollComplete) {
+      await step.sendEvent('fire-roll-complete', {
+        name: 'indexing/complete.roll',
+        data: { rollId: image.roll_id },
+        // Deduplication: scoped to a 5-minute window (UTC minute rounded down to
+        // the nearest 5) so simultaneous last-image completions collapse to one
+        // event, while a re-index triggered minutes later still fires correctly.
+        id: `roll-complete-${image.roll_id}-${Math.floor(Date.now() / 300_000)}`,
+      })
+    }
+
     return { imageId, status: 'indexed' }
   },
 )

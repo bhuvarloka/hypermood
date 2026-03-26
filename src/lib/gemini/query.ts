@@ -1,5 +1,6 @@
 import { ai, tryParseJson } from './parse-utils'
 import { validateQueryPlan, DEFAULT_PLAN } from './query.validate'
+import type { QueryPlan } from './query.validate'
 import type { ChatMessage } from '@/types/domain'
 
 const QUERY_MODEL = process.env.GEMINI_QUERY_MODEL ?? 'gemini-3-flash-preview'
@@ -84,6 +85,7 @@ RULES:
 8. limit: default 50, max 200. Increase for "show me all" style requests.
 9. For greetings, questions about the system, or completely non-search messages: return filters=[], semantic_search=null, sort=null, limit=50, and explain in clarification_note.
 10. For ambiguous queries: return your best-effort plan AND set clarification_note explaining what you assumed.
+11. Always include followups: 2-3 short contextual follow-up queries that reference what was just searched. They must be specific to the current query — not generic. Examples: if the query was about outdoor scenes, suggest "Narrow to golden hour only" or "Without people". If the query returns people, suggest "Show only close-ups" or "Split by time of day". For greetings/non-search queries, followups may be empty.
 
 Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Just the JSON.`
 
@@ -112,7 +114,8 @@ Return a JSON object with exactly this structure:
   "semantic_search": "text to embed and search by similarity, or null",
   "sort": { "field": "dot.notation.field", "direction": "asc | desc" } or null,
   "limit": 50,
-  "clarification_note": "explanation if query is ambiguous or non-search, else null"
+  "clarification_note": "explanation if query is ambiguous or non-search, else null",
+  "followups": ["contextual follow-up 1", "contextual follow-up 2"]
 }`
 }
 

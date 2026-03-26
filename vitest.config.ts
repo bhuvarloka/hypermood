@@ -6,9 +6,6 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/unit/**/*.test.ts'],
-    // @imagekit/next only declares "main"/"module" export conditions (no "node").
-    // Adding "main" here lets Vitest resolve it in the Node test environment.
-    server: { conditions: ['main'] },
   },
   resolve: {
     alias: {

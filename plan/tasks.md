@@ -285,7 +285,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 **Output:** Can create and browse rolls. Zero boxed cards. Inline creation works. Indexing progress visible in mono font.
 
-### Task 21 — Upload (ambient drag-and-drop)
+### Task 21 — Upload (ambient drag-and-drop) ✅
 
 **Read:** `plan/frontend.md` §Upload
 **Do:** No dedicated upload page. Drag-and-drop is ambient — it lives on the Roll View (Task 22), not a separate route.
@@ -301,7 +301,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 **Output:** Frictionless upload. Progress in mono. Grid populates live. Realtime subscription cleans up correctly.
 
-### Task 22 — The Command Center (chat + grid + selection + dimming)
+### Task 22 — The Command Center (chat + grid + selection + dimming) ✅
 
 **Read:** `plan/frontend.md` §The Command Center, §Image-as-Prompt Selection Flow
 **Do:** Build `/rolls/[rollId]` — the core of the app. Two symbiotic entities in a strict vertical stack: Chat (top), Grid (bottom). Build in the sub-steps listed below.
@@ -346,7 +346,7 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 **Output:** Chat drives grid. Frictionless click-to-select. Selection strip blooms in. Three-tier dimming preserves spatial memory. Keyboard navigable.
 
-### Task 23 — Stream of thought (processing indicator)
+### Task 23 — Stream of thought (processing indicator) ✅
 
 **Read:** `plan/frontend.md` §Stream of Thought
 **Do:** When a query is processing, a temporary assistant message occupies the exact position the real response will take — no layout shift when results arrive.
@@ -358,9 +358,15 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 3. When the real response arrives, the `ProcessingIndicator` is replaced in-place by the assistant message — no reflow, no layout jump. The swap is instant; the new content uses `.animate-bloom` to appear.
 4. Wire into `sendMessage`: insert `ProcessingIndicator` into chat state immediately on send, replace with real response on resolve.
 
+**Implementation notes:**
+
+- `processing` state in `ChatInterface` carries `{ isImagePrompt, matchCount? }`. On `sendMessage` resolve, `matchCount` is set first — this reveals the "Found M matches" terminal line instantly before the indicator is swapped out. `processing` is then cleared in `finally`.
+- `ProcessingIndicator` matches `MessageBubble` styling exactly (`bg-white`, `rounded-2xl`, `border border-primary-100`, `text-lg` container) so there is no layout shift at swap time. The mono/`text-base` is applied per-line, not on the container.
+- All incoming `MessageBubble` instances use `animate-bloom` on their outer container so every new message — including the one that replaces the indicator — blooms in.
+
 **Output:** User always knows the system is working. Terminal-like precision. No layout shift on response arrival.
 
-### Task 24 — Roll suggestions backend
+### Task 24 — Roll suggestions backend ✅
 
 **Do:** Backend support for contextual starter suggestions on each roll.
 
@@ -369,9 +375,19 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 3. Create Inngest function `generate-roll-suggestions` triggered by `indexing/complete.roll` event (fired at the end of the `index-roll` fan-out when all images are indexed). Writes suggestions to `rolls.suggestions`.
 4. On re-index, regenerate suggestions.
 
+**Implementation notes:**
+
+- `suggestions jsonb` column added directly to the `rolls` table definition in the migration file (single source of truth — no patch file).
+- **Completion detection** lives in `index-image.ts`: after `set-status-indexed`, a `check-roll-complete` step queries `count(*) WHERE status IN ('pending','indexing')` for the roll. When count hits 0, `indexing/complete.roll` is fired via `step.sendEvent`. The event dedup ID is `roll-complete-{rollId}-{Math.floor(Date.now() / 300_000)}` — a 5-minute window that collapses simultaneous last-image races to one event while allowing re-index passes minutes later.
+- `index-roll.ts` is unchanged — the fan-out remains fire-and-forget. Completion is detected bottom-up (last image to finish fires the event), not top-down (orchestrator waiting).
+- **People count** is bucketed into four ranges: none (0), solo (1), small group (2–4), large group (5+). `buildSuggestions` picks the dominant bucket and emits a specific phrase (`"Show me the portraits"`, `"Find the group shots"`, etc.) rather than a generic "images with people."
+- Empty suggestions array (`< MIN_IMAGES_FOR_SUGGESTIONS = 3 indexed images`) does **not** overwrite an existing valid `rolls.suggestions` value — the write step is skipped entirely.
+- `generate-roll-suggestions` Inngest function is registered in `app/api/inngest/route.ts` alongside `indexImage` and `indexRoll`.
+- **Manual step required:** Run `ALTER TABLE rolls ADD COLUMN suggestions jsonb;` in Supabase SQL Editor, then regenerate `src/lib/supabase/types.ts` via `pnpm dlx supabase gen types typescript --project-id yaspacaksjfihuhxnvwo > src/lib/supabase/types.ts`.
+
 **Output:** Every indexed roll has contextual starter suggestions stored in the DB.
 
-### Task 25 — Suggestions + follow-ups frontend
+### Task 25 — Suggestions + follow-ups frontend ✅
 
 **Read:** `plan/frontend.md` §Suggestions, §Follow-up suggestions
 **Do:** Two UI features that make the chat feel like a collaborator, not a search box.
@@ -382,10 +398,19 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 - Clicking a chip pre-fills and auto-submits the chat input — exactly as if the user had typed and pressed Enter.
 
 **Follow-up suggestions (after each assistant response with results):**
-1. Extend the `lib/gemini/query.ts` system prompt: ask for `suggested_followups: string[]` (2-3 items, contextual to the result set, not generic). Examples: `"Narrow to close-ups only"`, `"Exclude blurry ones"`, `"Split by time of day"`. Follow-ups must reference what just happened — they are not universal.
-2. Parse `suggested_followups` from the response alongside the query plan.
-3. Return follow-ups as part of `sendMessage` response payload. Store under a `followups` key in `interpreted_filter` JSONB.
-4. Render follow-up chips beneath each assistant message that has results. Same pill styling. Clicking sends as next message.
+1. Extend the `lib/gemini/query.ts` system prompt: ask for `followups: string[]` (2-3 items, contextual to the result set, not generic). Examples: `"Narrow to close-ups only"`, `"Exclude blurry ones"`, `"Split by time of day"`. Follow-ups must reference what just happened — they are not universal.
+2. Parse `followups` from the response alongside the query plan (field name in `QueryPlan` is `followups`).
+3. Return follow-ups as part of `sendMessage` response payload (`SendMessageResult.followups`). They travel as part of `interpreted_filter` JSONB (nested inside the `QueryPlan` object stored there).
+4. Render follow-up chips beneath each assistant message **that has results** (`result_image_ids` non-empty). Same pill styling. Clicking sends as next message.
+
+**Implementation notes:**
+
+- `QueryPlan` has a `followups: string[]` field validated in `query.validate.ts`. Field name in the Gemini response JSON is also `followups`.
+- Follow-ups are co-located on message objects as `MessageWithFollowups` (local type in `ChatInterface`) — no separate parallel state map.
+- `historyLoaded` boolean state in `ChatInterface` prevents initial suggestion chips from flashing before the history fetch resolves on mount. Chips only render once `historyLoaded = true` AND `messages.length === 0`.
+- `submitMessage(text, refIds?)` is the shared core — `handleSend` and `handleChipSend` are thin wrappers. Avoids duplicate send logic.
+- Follow-up chips and initial suggestion chips both carry `disabled={sending}` to prevent concurrent in-flight sends.
+- `rolls.suggestions` cast in `command-center.tsx` uses element-level narrowing: `.filter((s): s is string => typeof s === 'string')`.
 
 **Output:** Chat never feels cold. Initial suggestions solve the blank canvas. Follow-ups keep the conversation moving.
 
