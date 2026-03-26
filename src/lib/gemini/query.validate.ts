@@ -1,4 +1,4 @@
-import { asRecord } from './parse-utils'
+import { z } from 'zod'
 
 export type FilterOperator =
   | 'eq'
@@ -43,47 +43,47 @@ export const DEFAULT_PLAN: QueryPlan = {
   followups: [],
 }
 
+const filterSchema = z
+  .object({
+    field: z.string().min(1),
+    operator: z.enum(['eq', 'neq', 'contains', 'gte', 'lte', 'gt', 'lt', 'in']),
+    value: z.unknown(),
+  })
+  .refine(f => 'value' in f, { message: 'value key is required' })
+
+const nonEmptyString = z.string().trim().min(1)
+
+const queryPlanSchema = z.object({
+  filters: z
+    .array(filterSchema.catch(() => null as unknown as QueryFilter))
+    .catch([])
+    .transform(items => items.filter((f): f is QueryFilter => f !== null)),
+  semantic_search: nonEmptyString.nullable().catch(null),
+  sort: z
+    .object({
+      field: z.string().min(1),
+      direction: z.enum(['asc', 'desc']),
+    })
+    .nullable()
+    .catch(null),
+  limit: z
+    .number()
+    .refine(n => Number.isFinite(n), { message: 'must be finite' })
+    .transform(n => Math.min(200, Math.max(1, Math.round(n))))
+    .catch(50),
+  clarification_note: nonEmptyString.nullable().catch(null),
+  followups: z
+    .array(nonEmptyString.catch(null as unknown as string))
+    .catch([])
+    .transform(items => items.filter((s): s is string => s !== null)),
+})
+
 export function validateQueryPlan(raw: unknown): QueryPlan {
-  const data = asRecord(raw)
-  if (!data) return { ...DEFAULT_PLAN }
-
-  const filters: QueryFilter[] = []
-  if (Array.isArray(data.filters)) {
-    for (const item of data.filters) {
-      const f = asRecord(item)
-      if (!f || typeof f.field !== 'string' || f.field.length === 0) continue
-      if (!VALID_OPERATORS.includes(f.operator as FilterOperator)) continue
-      if (!('value' in f)) continue
-      filters.push({ field: f.field, operator: f.operator as FilterOperator, value: f.value })
-    }
+  const result = queryPlanSchema.safeParse(raw)
+  if (!result.success) {
+    // LLM returned a shape the schema doesn't recognise — log for diagnosis and use defaults.
+    console.error('[query.validate] unexpected QueryPlan shape:', result.error.message, '\nraw:', JSON.stringify(raw))
+    return { ...DEFAULT_PLAN }
   }
-
-  const semanticSearch = typeof data.semantic_search === 'string' && data.semantic_search.trim().length > 0
-    ? data.semantic_search.trim()
-    : null
-
-  let sort: QuerySort | null = null
-  const sortRaw = asRecord(data.sort)
-  if (sortRaw && typeof sortRaw.field === 'string' && sortRaw.field.length > 0 && (sortRaw.direction === 'asc' || sortRaw.direction === 'desc')) {
-    sort = { field: sortRaw.field, direction: sortRaw.direction }
-  }
-
-  const limit = typeof data.limit === 'number' && Number.isFinite(data.limit)
-    ? Math.min(200, Math.max(1, Math.round(data.limit)))
-    : 50
-
-  const clarificationNote = typeof data.clarification_note === 'string' && data.clarification_note.trim().length > 0
-    ? data.clarification_note.trim()
-    : null
-
-  const suggestedFollowups: string[] = []
-  if (Array.isArray(data.followups)) {
-    for (const item of data.followups) {
-      if (typeof item === 'string' && item.trim().length > 0) {
-        suggestedFollowups.push(item.trim())
-      }
-    }
-  }
-
-  return { filters, semantic_search: semanticSearch, sort, limit, clarification_note: clarificationNote, followups: suggestedFollowups }
+  return result.data
 }

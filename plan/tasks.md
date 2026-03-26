@@ -414,6 +414,19 @@ Slug generation: kebab-case from name, append short random suffix if collision.
 
 **Output:** Chat never feels cold. Initial suggestions solve the blank canvas. Follow-ups keep the conversation moving.
 
+### Type Safety Cleanup — 2026-03-26 ✅
+
+Pre-task-26 cleanup to fix two high-priority issues identified in `critics.md`.
+
+**Fix 1: `as any` casts on Supabase RPC calls removed**
+
+- `src/lib/gemini/query-executor.ts` and `src/lib/gemini/image-search.ts` both cast `supabase as any` to call `.rpc()`. The Supabase client was already instantiated with `createServerClient<Database>`, and the RPC functions (`search_images_by_embedding`, `search_images_by_embedding_filtered`) are fully typed in `src/lib/supabase/types.ts`. The casts were unnecessary — removed along with `eslint-disable` comments. No behaviour change.
+
+**Fix 2: `validateQueryPlan` rewritten with Zod 4**
+
+- Replaced 44 lines of hand-rolled `typeof` checks in `src/lib/gemini/query.validate.ts` with a Zod schema. Invalid LLM response shapes now log to `console.error` with the raw JSON for diagnosis, instead of silently falling back to `DEFAULT_PLAN`. Individual invalid filters/followups are still dropped (matching previous behaviour) via `.catch()` at the array item level. All 31 existing tests pass unchanged.
+- Zod 4.3.6 added as a dependency.
+
 ### Task 26 — Actionable interpreted filters
 
 **Read:** `plan/frontend.md` §Actionable Interpreted Filters

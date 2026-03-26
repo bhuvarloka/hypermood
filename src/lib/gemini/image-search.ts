@@ -57,8 +57,7 @@ export async function searchByImageReferences(
   // Uncapped: if imageIds is large, the multiplier alone may not cover the exclusions.
   const candidateLimit = Math.min(limit * CANDIDATE_MULTIPLIER + imageIds.length, 500)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rpcRows, error: rpcError } = await (supabase as any).rpc(
+  const { data: rpcRows, error: rpcError } = await supabase.rpc(
     'search_images_by_embedding',
     {
       p_roll_id: rollId,

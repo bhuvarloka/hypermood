@@ -23,23 +23,18 @@ export async function executeQuery(plan: QueryPlan, rollId: string): Promise<Que
     // after any rows excluded by metadata filters.
     const candidateLimit = Math.min(limit * 3, 300)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const db = supabase as any
-    let rpcResult
-    if (clauses.length > 0) {
-      rpcResult = await db.rpc('search_images_by_embedding_filtered', {
-        p_roll_id: rollId,
-        p_embedding: vectorLiteral,
-        p_where_clause: clauses.join(' AND '),
-        p_limit: candidateLimit,
-      })
-    } else {
-      rpcResult = await db.rpc('search_images_by_embedding', {
-        p_roll_id: rollId,
-        p_embedding: vectorLiteral,
-        p_limit: candidateLimit,
-      })
-    }
+    const rpcResult = clauses.length > 0
+      ? await supabase.rpc('search_images_by_embedding_filtered', {
+          p_roll_id: rollId,
+          p_embedding: vectorLiteral,
+          p_where_clause: clauses.join(' AND '),
+          p_limit: candidateLimit,
+        })
+      : await supabase.rpc('search_images_by_embedding', {
+          p_roll_id: rollId,
+          p_embedding: vectorLiteral,
+          p_limit: candidateLimit,
+        })
 
     if (rpcResult.error) throw new Error(rpcResult.error.message)
 
