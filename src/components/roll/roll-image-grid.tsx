@@ -13,6 +13,7 @@ type Props = {
   selectedImageIds?: string[]
   onImageClick?: (id: string) => void
   onImagesChange?: (images: ImageRecord[]) => void
+  onFullscreen?: (imageId: string, contextImages: ImageRecord[]) => void
 }
 
 export function RollImageGrid({
@@ -22,6 +23,7 @@ export function RollImageGrid({
   selectedImageIds = [],
   onImageClick,
   onImagesChange,
+  onFullscreen,
 }: Props) {
   const [images, setImages] = useState<ImageRecord[]>(initialImages)
   const bufferRef = useRef<ImageRecord[]>([])
@@ -88,6 +90,10 @@ export function RollImageGrid({
   const resultSet = resultImageIds !== null ? new Set(resultImageIds) : null
   const selectedSet = new Set(selectedImageIds)
 
+  // Context-aware navigation: Darkroom navigates within the active result set (or all images).
+  const contextImages =
+    resultSet !== null ? images.filter((img) => resultSet.has(img.id)) : images
+
   return (
     <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-1 p-4">
       {images.map((image) => {
@@ -103,6 +109,7 @@ export function RollImageGrid({
             opacity={opacity}
             isSelected={isSelected}
             onClick={onImageClick}
+            onFullscreen={onFullscreen ? () => onFullscreen(image.id, contextImages) : undefined}
           />
         )
       })}
@@ -115,9 +122,10 @@ type ImageCellProps = {
   opacity: number
   isSelected: boolean
   onClick?: (id: string) => void
+  onFullscreen?: () => void
 }
 
-function ImageCell({ image, opacity, isSelected, onClick }: ImageCellProps) {
+function ImageCell({ image, opacity, isSelected, onClick, onFullscreen }: ImageCellProps) {
   const src = getImageUrl(image.storage_key, { width: 400, quality: 80 })
 
   const handleActivate = () => onClick?.(image.id)
@@ -152,10 +160,17 @@ function ImageCell({ image, opacity, isSelected, onClick }: ImageCellProps) {
         style={{ height: 'auto' }}
       />
 
-      {/* wired in Task 27 (The Darkroom) */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 animate-bloom pointer-events-none">
-        <span className="text-white text-lg leading-none drop-shadow">⤢</span>
-      </div>
+      {/* Fullscreen icon — absolutely positioned, zero layout shift, click isolated from select */}
+      {onFullscreen && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onFullscreen() }}
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 animate-bloom pointer-events-auto flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-black/60 animate-swiss"
+          aria-label="Open fullscreen"
+          tabIndex={-1}
+        >
+          <span className="text-white text-base leading-none">⤢</span>
+        </button>
+      )}
     </div>
   )
 }

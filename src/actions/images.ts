@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { uploadToImageKit } from '@/lib/imagekit/upload'
 import { extractExif } from '@/lib/exif/extract'
 import { inngest } from '@/lib/inngest/client'
-import type { Image } from '@/types/domain'
+import type { Image, BaseLayerMetadata } from '@/types/domain'
 import type { TablesInsert } from '@/lib/supabase/types'
 
 export async function uploadImages(formData: FormData): Promise<{ imageIds: string[] }> {
@@ -64,4 +64,21 @@ export async function uploadImages(formData: FormData): Promise<{ imageIds: stri
   await inngest.send({ name: 'indexing/start.roll', data: { rollId } })
 
   return { imageIds }
+}
+
+export async function getImageMetadata(imageId: string): Promise<BaseLayerMetadata | null> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+
+  const { data, error } = await supabase
+    .from('image_metadata')
+    .select('metadata')
+    .eq('image_id', imageId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (error || !data?.metadata) return null
+  return data.metadata as unknown as BaseLayerMetadata
 }

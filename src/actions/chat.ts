@@ -6,7 +6,8 @@ import { executeQuery } from '@/lib/gemini/query-executor'
 import { searchByImageReferences } from '@/lib/gemini/image-search'
 import type { ChatMessage, Image } from '@/types/domain'
 import type { Json, TablesInsert } from '@/lib/supabase/types'
-import type { QueryPlan } from '@/lib/gemini/query'
+import type { QueryPlan, QueryFilter } from '@/lib/gemini/query'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const CHAT_HISTORY_CONTEXT_LIMIT = 20
 const CHAT_HISTORY_PAGE_SIZE = 50
@@ -83,30 +84,18 @@ export async function sendMessage(
   }
 
   const resultImageIds = resultImages.map(img => img.id)
-  const assistantContent = buildAssistantContent(total, interpretedFilter)
-
-  const assistantRow: TablesInsert<'chat_messages'> = {
-    roll_id: rollId,
-    user_id: user.id,
-    role: 'assistant',
-    content: assistantContent,
-    result_image_ids: resultImageIds.length > 0 ? resultImageIds : null,
-    interpreted_filter: interpretedFilter ? (interpretedFilter as unknown as Json) : null,
-  }
-
-  const { data: savedAssistantMsg, error: assistantMsgError } = await supabase
-    .from('chat_messages')
-    .insert(assistantRow as never)
-    .select()
-    .single()
-
-  if (assistantMsgError || !savedAssistantMsg) {
-    throw new Error(`Failed to save assistant message: ${assistantMsgError?.message}`)
-  }
+  const savedAssistantMsg = await saveAssistantMessage(
+    supabase,
+    rollId,
+    user.id,
+    buildAssistantContent(total, interpretedFilter),
+    resultImageIds,
+    interpretedFilter,
+  )
 
   return {
     userMessage: savedUserMsg as ChatMessage,
-    assistantMessage: savedAssistantMsg as ChatMessage,
+    assistantMessage: savedAssistantMsg,
     images: resultImages,
     total,
     interpretedFilter,
@@ -143,6 +132,92 @@ export async function getChatHistory(
   if (error) throw new Error(`Failed to fetch chat history: ${error.message}`)
 
   return ((data ?? []) as ChatMessage[]).reverse()
+}
+
+export type FilterMod =
+  | { type: 'remove'; index: number }
+  | { type: 'add'; filter: QueryFilter }
+
+export type RerunResult = {
+  assistantMessage: ChatMessage
+  images: Image[]
+  total: number
+  interpretedFilter: QueryPlan
+}
+
+export async function rerunWithModifiedFilters(
+  rollId: string,
+  existingPlan: QueryPlan,
+  modifications: FilterMod[],
+): Promise<RerunResult> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+
+  let filters = [...existingPlan.filters]
+
+  // Process removals in reverse index order so earlier removals don't shift later indices.
+  const removals = modifications
+    .filter((m): m is Extract<FilterMod, { type: 'remove' }> => m.type === 'remove')
+    .sort((a, b) => b.index - a.index)
+
+  for (const mod of removals) {
+    // Guard against out-of-bounds indices from client — negative splice removes from tail.
+    if (mod.index < 0 || mod.index >= filters.length) continue
+    filters.splice(mod.index, 1)
+  }
+
+  for (const mod of modifications) {
+    if (mod.type === 'add') filters.push(mod.filter)
+  }
+
+  const modifiedPlan: QueryPlan = { ...existingPlan, filters }
+  const queryResult = await executeQuery(modifiedPlan, rollId)
+  const resultImageIds = queryResult.images.map(img => img.id)
+
+  const savedMsg = await saveAssistantMessage(
+    supabase,
+    rollId,
+    user.id,
+    buildAssistantContent(queryResult.total, modifiedPlan),
+    resultImageIds,
+    modifiedPlan,
+  )
+
+  return {
+    assistantMessage: savedMsg,
+    images: queryResult.images,
+    total: queryResult.total,
+    interpretedFilter: modifiedPlan,
+  }
+}
+
+async function saveAssistantMessage(
+  supabase: SupabaseClient,
+  rollId: string,
+  userId: string,
+  content: string,
+  resultImageIds: string[],
+  interpretedFilter: QueryPlan | null,
+): Promise<ChatMessage> {
+  const row: TablesInsert<'chat_messages'> = {
+    roll_id: rollId,
+    user_id: userId,
+    role: 'assistant',
+    content,
+    result_image_ids: resultImageIds.length > 0 ? resultImageIds : null,
+    interpreted_filter: interpretedFilter ? (interpretedFilter as unknown as Json) : null,
+  }
+
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert(row as never)
+    .select()
+    .single()
+
+  if (error || !data) throw new Error(`Failed to save assistant message: ${error?.message}`)
+  return data as ChatMessage
 }
 
 function buildAssistantContent(resultCount: number, plan: QueryPlan | null): string {

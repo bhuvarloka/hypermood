@@ -427,7 +427,7 @@ Pre-task-26 cleanup to fix two high-priority issues identified in `critics.md`.
 - Replaced 44 lines of hand-rolled `typeof` checks in `src/lib/gemini/query.validate.ts` with a Zod schema. Invalid LLM response shapes now log to `console.error` with the raw JSON for diagnosis, instead of silently falling back to `DEFAULT_PLAN`. Individual invalid filters/followups are still dropped (matching previous behaviour) via `.catch()` at the array item level. All 31 existing tests pass unchanged.
 - Zod 4.3.6 added as a dependency.
 
-### Task 26 — Actionable interpreted filters
+### Task 26 — Actionable interpreted filters ✅
 
 **Read:** `plan/frontend.md` §Actionable Interpreted Filters
 **Do:** The interpreted filter is not a debug readout — it is a direct manipulation panel. Transform it accordingly.
@@ -440,7 +440,7 @@ Pre-task-26 cleanup to fix two high-priority issues identified in `critics.md`.
 
 **Output:** Natural language to start, surgical direct manipulation to refine. No round-trip to the LLM on filter edits.
 
-### Task 27 — Image Detail (The Darkroom)
+### Task 27 — Image Detail (The Darkroom) ✅
 
 **Read:** `plan/frontend.md` §Image Detail
 **Do:** Build the full-screen image detail overlay triggered by the Fullscreen icon on grid image hover.
@@ -455,7 +455,7 @@ Pre-task-26 cleanup to fix two high-priority issues identified in `critics.md`.
 
 **Output:** Immersive, isolated single-image view. Background isolation (dark/light toggle). Hidden metadata reveals on hover. Keyboard navigable.
 
-### Task 28 — Preview panel + gallery creation
+### Task 28 — Preview panel + gallery creation ✅
 
 **Read:** `plan/frontend.md` §Preview Panel (The Narrative Check)
 **Do:** Build the slide-up preview panel and the save-as-gallery flow that lives inside it.
@@ -474,7 +474,7 @@ Pre-task-26 cleanup to fix two high-priority issues identified in `critics.md`.
 
 **Output:** Preview panel for narrative judgment. Save-as-gallery is one gesture from the curation result.
 
-### Task 29 — Gallery management
+### Task 29 — Gallery management ✅
 
 **Read:** `plan/frontend.md` §Settings / Manager
 **Do:** Gallery management via a full-height drawer from the right — not a separate page, not a modal.

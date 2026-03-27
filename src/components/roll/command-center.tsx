@@ -1,5 +1,5 @@
 import { AmbientUpload } from '@/components/roll/ambient-upload'
-import { ChatInterface } from '@/components/chat/ChatInterface'
+import { ChatInterface } from '@/components/chat/chat-interface'
 import type { Image as ImageRecord, Roll } from '@/types/domain'
 
 type Props = {

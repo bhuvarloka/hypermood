@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
 import { getImageUrl } from '@/lib/imagekit/url'
+import { GalleryDrawer } from '@/components/gallery/gallery-drawer'
 import type { RollWithImageCount } from '@/types/domain'
 import type { RollThumbnailMap } from '@/lib/rolls/thumbnails'
 
@@ -15,34 +16,55 @@ type Props = {
 }
 
 export function Rail({ rolls, thumbnails, userEmail }: Props) {
+  const [galleriesOpen, setGalleriesOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = () => setGalleriesOpen(true)
+    window.addEventListener('hypermood:open-galleries', handler)
+    return () => window.removeEventListener('hypermood:open-galleries', handler)
+  }, [])
+
+
   return (
-    <nav className="flex flex-col h-full w-56 shrink-0 bg-white">
-      <div className="flex-1 overflow-y-auto py-8 px-5">
-        <Link
-          href="/rolls"
-          className="block text-base font-medium text-primary-900 mb-8 animate-swiss hover:text-primary-800"
-        >
-          Hypermood
-        </Link>
+    <>
+      <nav className="flex flex-col h-full w-56 shrink-0 bg-white">
+        <div className="flex-1 overflow-y-auto py-8 px-5">
+          <Link
+            href="/rolls"
+            className="block text-base font-medium text-primary-900 mb-8 animate-swiss hover:text-primary-800"
+          >
+            Hypermood
+          </Link>
 
-        <ul className="space-y-1">
-          {rolls.map((roll) => (
-            <RailRollItem
-              key={roll.id}
-              roll={roll}
-              storageKeys={thumbnails[roll.id] ?? []}
-            />
-          ))}
-          {rolls.length === 0 && (
-            <li className="text-lg text-primary-900">No rolls yet</li>
-          )}
-        </ul>
-      </div>
+          <ul className="space-y-1">
+            {rolls.map((roll) => (
+              <RailRollItem
+                key={roll.id}
+                roll={roll}
+                storageKeys={thumbnails[roll.id] ?? []}
+              />
+            ))}
+            {rolls.length === 0 && (
+              <li className="text-lg text-primary-900">No rolls yet</li>
+            )}
+          </ul>
+        </div>
 
-      <div className="px-5 py-6">
-        <RailUser email={userEmail} />
-      </div>
-    </nav>
+        <div className="px-5 py-4 flex flex-col gap-3">
+          <button
+            onClick={() => setGalleriesOpen(true)}
+            className="text-base font-mono text-primary-200 text-left animate-swiss hover:text-primary-900 -mx-1 px-1"
+          >
+            Galleries
+          </button>
+          <RailUser email={userEmail} />
+        </div>
+      </nav>
+
+      {galleriesOpen && (
+        <GalleryDrawer onClose={() => setGalleriesOpen(false)} />
+      )}
+    </>
   )
 }
 

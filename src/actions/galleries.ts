@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAnonClient } from '@/lib/supabase/admin'
-import type { Gallery, GalleryLayout, GalleryWithImages, Image } from '@/types/domain'
+import type { Gallery, GalleryLayout, GalleryWithImages, GalleryListItem, Image } from '@/types/domain'
 import type { Json, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 
 function toSlug(name: string): string {
@@ -74,6 +74,7 @@ export async function createGallery(
   imageIds: string[],
   filterCriteria?: Json,
   layout?: GalleryLayout,
+  isPublic?: boolean,
 ): Promise<Gallery> {
   const supabase = await createClient()
 
@@ -88,7 +89,7 @@ export async function createGallery(
     roll_id: rollId,
     name,
     slug,
-    is_public: false,
+    is_public: isPublic ?? false,
     layout: layout ?? 'masonry',
     filter_criteria: filterCriteria ?? null,
   }
@@ -257,6 +258,30 @@ export async function listGalleries(rollId?: string): Promise<Gallery[]> {
   return (data ?? []) as Gallery[]
 }
 
+export async function getGalleryImages(galleryId: string): Promise<Image[]> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+
+  await assertGalleryOwner(supabase, galleryId, user.id)
+
+  const { data, error } = await supabase
+    .from('gallery_images')
+    .select('position, images(*)')
+    .eq('gallery_id', galleryId)
+    .order('position', { ascending: true }) as {
+      data: { position: number; images: Record<string, unknown> | null }[] | null
+      error: { message: string } | null
+    }
+
+  if (error) throw new Error(`Failed to fetch gallery images: ${error.message}`)
+
+  return (data ?? [])
+    .map((r) => r.images)
+    .filter((img): img is Record<string, unknown> => img !== null) as unknown as Image[]
+}
+
 // Public image fields safe to expose to unauthenticated viewers.
 const PUBLIC_IMAGE_FIELDS = 'id, storage_key, original_filename, width, height, mime_type, captured_at' as const
 
@@ -285,4 +310,38 @@ export async function getPublicGallery(slug: string): Promise<GalleryWithImages>
     .filter((img): img is Record<string, unknown> => img !== null) as unknown as Image[]
 
   return { ...(galleryFields as Gallery), images }
+}
+
+const GALLERY_THUMBNAIL_LIMIT = 4
+
+export async function listGalleriesWithImageData(rollId?: string): Promise<GalleryListItem[]> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+
+  let query = supabase
+    .from('galleries')
+    .select(`*, gallery_images(position, images(id, storage_key))`)
+    .eq('user_id', user.id)
+    .order('position', { referencedTable: 'gallery_images', ascending: true })
+    .order('created_at', { ascending: false })
+
+  if (rollId) query = query.eq('roll_id', rollId)
+
+  type NestedGallery = Record<string, unknown> & {
+    gallery_images: { images: { id: string; storage_key: string } | null }[]
+  }
+
+  const { data, error } = await query as { data: NestedGallery[] | null; error: { message: string } | null }
+  if (error) throw new Error(`Failed to list galleries: ${error.message}`)
+
+  return (data ?? []).map((row) => {
+    const { gallery_images, ...galleryFields } = row
+    const thumbnail_keys = gallery_images
+      .slice(0, GALLERY_THUMBNAIL_LIMIT)
+      .map((gi) => gi.images?.storage_key)
+      .filter((k): k is string => !!k)
+    return { ...(galleryFields as Gallery), image_count: gallery_images.length, thumbnail_keys }
+  })
 }

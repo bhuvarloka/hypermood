@@ -39,6 +39,11 @@ export type GalleryWithImages = Gallery & {
   images: Image[]
 }
 
+export type GalleryListItem = Gallery & {
+  image_count: number
+  thumbnail_keys: string[]
+}
+
 export type ChatMessageWithResults = ChatMessage & {
   result_images?: Image[]
   // interpreted_filter is Json | null in the DB layer; this enriched type narrows
