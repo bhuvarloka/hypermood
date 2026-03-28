@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { buildLines } from './processing-indicator.logic'
 
 type Props = {
   isImagePrompt: boolean
@@ -10,13 +11,7 @@ type Props = {
 }
 
 export function ProcessingIndicator({ isImagePrompt, imageCount, matchCount }: Props) {
-  const baseLines = isImagePrompt
-    ? ['Computing visual similarity...', 'Blending with text prompt...']
-    : ['Interpreting query...', `Searching ${imageCount.toLocaleString()} images...`]
-
-  const lines = matchCount !== undefined
-    ? [...baseLines, `Found ${matchCount.toLocaleString()} match${matchCount === 1 ? '' : 'es'}`]
-    : baseLines
+  const lines = buildLines({ isImagePrompt, imageCount, matchCount })
 
   // Each line blooms in with a 100ms stagger.
   const [visibleCount, setVisibleCount] = useState(0)

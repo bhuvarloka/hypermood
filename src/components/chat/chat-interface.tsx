@@ -13,7 +13,7 @@ import { ProcessingIndicator } from '@/components/chat/processing-indicator'
 import { getImageUrl } from '@/lib/imagekit/url'
 import type { ChatMessageWithResults, Image as ImageRecord } from '@/types/domain'
 
-const GALLERY_INTENT_RE = /\b(show|open|view|see|list)\b.*\bgalleries?\b/i
+import { GALLERY_INTENT_RE, derivePreviewImages } from '@/components/chat/chat-interface.logic'
 
 const UNIVERSAL_SUGGESTIONS = [
   'Show me the best shots',
@@ -206,23 +206,10 @@ export function ChatInterface({ rollId, rollName, initialImages, rollSuggestions
     () => new Map(liveImages.map((img) => [img.id, img])),
     [liveImages],
   )
-  // Selection takes priority over result set — an explicit pick always beats an implicit query result.
-  // Falls back to result set, then the full roll.
-  const previewImages = useMemo<ImageRecord[]>(() => {
-    if (selectedImageIds.length > 0) {
-      return selectedImageIds.flatMap((id) => {
-        const img = imageMap.get(id)
-        return img ? [img] : []
-      })
-    }
-    if (resultImageIds !== null && resultImageIds.length > 0) {
-      return resultImageIds.flatMap((id) => {
-        const img = imageMap.get(id)
-        return img ? [img] : []
-      })
-    }
-    return liveImages
-  }, [selectedImageIds, resultImageIds, liveImages, imageMap])
+  const previewImages = useMemo<ImageRecord[]>(
+    () => derivePreviewImages({ selectedImageIds, resultImageIds, liveImages, imageMap }),
+    [selectedImageIds, resultImageIds, liveImages, imageMap],
+  )
 
   const canPreview = previewImages.length > 0
 

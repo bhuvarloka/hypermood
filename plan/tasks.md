@@ -487,7 +487,7 @@ Pre-task-26 cleanup to fix two high-priority issues identified in `critics.md`.
 
 **Output:** Full gallery management. Accessible from Rail and from natural language in chat.
 
-### Task 30 — Public gallery page
+### Task 30 — Public gallery page ✅
 
 **Read:** `plan/frontend.md` §Public Gallery
 **Do:** Build `/g/[slug]` — no auth required, no Rail, pure content.

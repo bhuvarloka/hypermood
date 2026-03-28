@@ -12,8 +12,8 @@ type Props = {
 }
 
 export function PublicGalleryView({ gallery }: Props) {
-  // If gallery layout is not timeline, masonry is the only option — no toggle shown.
-  const supportsTimeline = gallery.layout === 'timeline' || gallery.layout === 'masonry'
+  // Toggle shown only when creator explicitly chose timeline — masonry is single-layout default.
+  const supportsTimeline = gallery.layout === 'timeline'
   const initialMode: ViewMode = gallery.layout === 'timeline' ? 'timeline' : 'masonry'
   const [mode, setMode] = useState<ViewMode>(initialMode)
 
@@ -121,7 +121,7 @@ function TimelineStrip({ images }: { images: ImageRecord[] }) {
   return (
     <>
       {/* Large screens: horizontal scroll */}
-      <div className="hidden md:flex flex-row overflow-x-auto items-center gap-1 md:gap-2 px-8 py-16 min-h-screen">
+      <div className="hidden md:flex flex-row overflow-x-auto items-center gap-2 px-8 py-16 min-h-screen">
         {images.map((image, i) => (
           <GalleryImage
             key={image.id}

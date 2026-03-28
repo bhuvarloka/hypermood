@@ -68,7 +68,7 @@ Swiss-minimal. Warm zinc grayscale. The images and chat are kings — everything
 
 **Task 29: COMPLETE** — Gallery management drawer: `GalleryDrawer` component slides in from the right. List view shows gallery rows (name, image count, public/private badge in `font-mono`, `hover:bg-primary-50`). Detail view: 3-col compact image grid, drag-to-reorder, `×` to remove, inline name/layout/visibility editing. Accessible from Rail "Galleries" button, from chat (`GALLERY_INTENT_RE` dispatches `hypermood:open-galleries` event), and via `/galleries` + `/galleries/[galleryId]` direct routes. Server actions: `getGalleryImages`, `listGalleriesWithImageData`.
 
-**Task 30: NOT STARTED** — Next: Task 30 (Public gallery page `/g/[slug]`).
+**Task 30: COMPLETE** — Public gallery page `/g/[slug]`: `PublicGalleryView` client component, no auth, no Rail. Top bar: logo (left), gallery name (center), view mode toggle (right — shown only for `layout === 'timeline'` galleries). Masonry: `columns-1..4`, `gap-16` editorial spacing, `mb-16` between items. Timeline: horizontal scroll strip on `md+` (`flex-row overflow-x-auto`, `lg:w-1/4` per image, `gap-2`), folds to full-width vertical stack on mobile. Mode switch uses `document.startViewTransition` (with sync fallback) + `viewTransitionName` per image for smooth glide animation. Images stagger-bloom in (30ms, capped 600ms). 404 via `notFound()` on private/missing galleries. Old `src/app/gallery/[slug]/page.tsx` stub removed.
 
 ## Key UX Patterns (from Shape of AI analysis)
 

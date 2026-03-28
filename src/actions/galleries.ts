@@ -4,15 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnonClient } from '@/lib/supabase/admin'
 import type { Gallery, GalleryLayout, GalleryWithImages, GalleryListItem, Image } from '@/types/domain'
 import type { Json, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
-
-function toSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
+import { toSlug } from './gallery.logic'
 
 function randomSuffix(): string {
   return Math.random().toString(36).slice(2, 7)

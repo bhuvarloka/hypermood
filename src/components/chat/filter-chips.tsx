@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import type { QueryFilter, QueryPlan } from '@/lib/gemini/query'
 import type { FilterMod } from '@/actions/chat'
+import { parseFilterInput, formatChipLabel } from './filter-chips.logic'
 
 type Props = {
   plan: QueryPlan
@@ -24,43 +25,14 @@ export function FilterChips({ plan, disabled, onModify }: Props) {
   }, [onModify])
 
   const commitAdd = useCallback(() => {
-    const raw = addInput.trim()
-    if (!raw) {
+    const mod = parseFilterInput(addInput)
+    if (!mod) {
       setAddingFilter(false)
       setAddInput('')
       return
     }
 
-    // Parse user input into a QueryFilter. Supported formats:
-    //   field: value          → eq
-    //   field < value         → lt
-    //   field <= value        → lte
-    //   field > value         → gt
-    //   field >= value        → gte
-    //   field != value        → neq
-    const numericOp = raw.match(/^(.+?)\s*(<=|>=|<|>|!=)\s*(.+)$/)
-    if (numericOp) {
-      const [, field, rawOp, rawVal] = numericOp
-      const opMap: Record<string, QueryFilter['operator']> = {
-        '<': 'lt', '<=': 'lte', '>': 'gt', '>=': 'gte', '!=': 'neq',
-      }
-      const operator = opMap[rawOp]
-      const numVal = parseFloat(rawVal)
-      const value = isNaN(numVal) ? rawVal.trim() : numVal
-      onModify([{ type: 'add', filter: { field: field.trim(), operator, value } }])
-    } else {
-      // "field: value" → eq
-      const colonIdx = raw.indexOf(':')
-      if (colonIdx !== -1) {
-        const field = raw.slice(0, colonIdx).trim()
-        const value = raw.slice(colonIdx + 1).trim()
-        onModify([{ type: 'add', filter: { field, operator: 'eq', value } }])
-      } else {
-        // Treat as a tag contains filter
-        onModify([{ type: 'add', filter: { field: 'tags', operator: 'contains', value: raw } }])
-      }
-    }
-
+    onModify([mod])
     setAddingFilter(false)
     setAddInput('')
   }, [addInput, onModify])
@@ -144,18 +116,4 @@ function FilterChip({
   )
 }
 
-function formatChipLabel(filter: QueryFilter): string {
-  const { field, operator, value } = filter
-  const shortField = field.replace(/\[\]\./, '.').split('.').slice(-2).join('.')
-
-  const opSymbol: Record<string, string> = {
-    eq: ':', neq: '≠', contains: ':', gte: '≥', lte: '≤', gt: '>', lt: '<', in: 'in',
-  }
-  const sep = opSymbol[operator] ?? ':'
-
-  const displayVal = Array.isArray(value)
-    ? value.join(', ')
-    : String(value)
-
-  return `${shortField}${sep} ${displayVal}`
-}
+// formatChipLabel lives in ./filter-chips.logic.ts
