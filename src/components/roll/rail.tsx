@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from '@/actions/auth'
+import { deleteRoll } from '@/actions/rolls'
 import { getImageUrl } from '@/lib/imagekit/url'
 import { GalleryDrawer } from '@/components/gallery/gallery-drawer'
 import type { RollWithImageCount } from '@/types/domain'
@@ -76,16 +77,45 @@ function RailRollItem({
   storageKeys: string[]
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const isActive = pathname.startsWith(`/rolls/${roll.id}`)
   const [showPreview, setShowPreview] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuPos) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuPos(null)
+        setConfirming(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [menuPos])
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+    setShowPreview(false)
+    setMenuPos({ x: e.clientX, y: e.clientY })
+    setConfirming(false)
+  }
+
+  async function handleDelete() {
+    await deleteRoll(roll.id)
+    setMenuPos(null)
+    if (isActive) router.push('/rolls')
+    router.refresh()
+  }
 
   return (
-    // Wrapper covers both the link and the absolutely-positioned popup,
-    // so mouse-leave only fires when leaving the combined hover zone.
     <li
       className="relative"
       onMouseEnter={() => setShowPreview(true)}
       onMouseLeave={() => setShowPreview(false)}
+      onContextMenu={handleContextMenu}
     >
       <Link
         href={`/rolls/${roll.id}`}
@@ -99,10 +129,43 @@ function RailRollItem({
       </Link>
 
       {showPreview && storageKeys.length > 0 && (
-        // Extend hover zone rightward to cover the popup via padding,
-        // so moving into the popup doesn't trigger onMouseLeave on the <li>.
         <div className="absolute left-full top-0 pl-2 z-50">
           <RollMicroPreview storageKeys={storageKeys} />
+        </div>
+      )}
+
+      {menuPos && (
+        <div
+          ref={menuRef}
+          className="fixed z-50 bg-white border border-primary-200 py-1 min-w-36 animate-bloom"
+          style={{ top: menuPos.y, left: menuPos.x }}
+        >
+          {confirming ? (
+            <div className="px-3 py-2">
+              <p className="text-base text-primary-900 mb-2">Delete "{roll.name}"?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDelete}
+                  className="text-base text-semantic-alert animate-swiss hover:underline"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirming(false)}
+                  className="text-base text-primary-900 animate-swiss hover:underline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirming(true)}
+              className="w-full text-left px-3 py-1.5 text-base text-semantic-alert animate-swiss hover:bg-primary-50"
+            >
+              Delete roll
+            </button>
+          )}
         </div>
       )}
     </li>

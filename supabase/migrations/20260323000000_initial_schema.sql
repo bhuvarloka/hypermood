@@ -108,13 +108,13 @@ CREATE INDEX idx_image_metadata_image_id ON image_metadata (image_id);
 -- RLS policies enforce row-level restrictions on top of these grants.
 -- ============================================================
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.rolls             TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.images            TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.image_metadata    TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.image_embeddings  TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_messages     TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.galleries         TO anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.gallery_images    TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.rolls             TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.images            TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.image_metadata    TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.image_embeddings  TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_messages     TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.galleries         TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.gallery_images    TO anon, authenticated, service_role;
 
 -- ============================================================
 -- ROW LEVEL SECURITY

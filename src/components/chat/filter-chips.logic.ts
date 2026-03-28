@@ -1,72 +1,81 @@
 import type { QueryFilter } from '@/lib/gemini/query'
 
-export type FilterMod =
-  | { type: 'remove'; index: number }
-  | { type: 'add'; filter: QueryFilter }
-
 /**
- * Parses a raw filter input string into a FilterMod.
- * Supported formats:
- *   field: value          → eq
- *   field < value         → lt
- *   field <= value        → lte
- *   field > value         → gt
- *   field >= value        → gte
- *   field != value        → neq
- *   bare word             → tags contains
- *
- * Returns null if the input is empty after trimming.
+ * Maps internal field paths to plain English category names shown in chips.
+ * Users should never see "objects[].label" — they should see "vase".
  */
-export function parseFilterInput(raw: string): FilterMod | null {
-  const trimmed = raw.trim()
-  if (!trimmed) return null
-
-  const numericOp = trimmed.match(/^(.+?)\s*(<=|>=|<|>|!=)\s*(.+)$/)
-  if (numericOp) {
-    const [, field, rawOp, rawVal] = numericOp
-    const opMap: Record<string, QueryFilter['operator']> = {
-      '<': 'lt', '<=': 'lte', '>': 'gt', '>=': 'gte', '!=': 'neq',
-    }
-    const operator = opMap[rawOp]
-    const numVal = parseFloat(rawVal)
-    const value = isNaN(numVal) ? rawVal.trim() : numVal
-    return { type: 'add', filter: { field: field.trim(), operator, value } }
-  }
-
-  const colonIdx = trimmed.indexOf(':')
-  if (colonIdx !== -1) {
-    const field = trimmed.slice(0, colonIdx).trim()
-    const value = trimmed.slice(colonIdx + 1).trim()
-    return { type: 'add', filter: { field, operator: 'eq', value } }
-  }
-
-  // Bare word → tags contains
-  return { type: 'add', filter: { field: 'tags', operator: 'contains', value: trimmed } }
+const FIELD_LABELS: Record<string, string> = {
+  'objects[].label': '',       // value speaks for itself: "vase", "car"
+  'tags': '',                  // same — value is the label
+  'objects[].attributes': '',
+  'people.descriptions[].clothing': '',
+  'colors.dominant_color_name': 'color',
+  'colors.palette_mood': 'mood',
+  'scene.setting': 'setting',
+  'scene.environment': 'place',
+  'scene.time_of_day': 'time',
+  'scene.weather': 'weather',
+  'mood.emotional_tone': 'feeling',
+  'mood.aesthetic_style': 'style',
+  'mood.energy_level': 'energy',
+  'composition.framing': 'framing',
+  'composition.symmetry': 'symmetry',
+  'composition.depth': 'depth',
+  'technical.orientation': 'orientation',
+  'technical.exposure': 'exposure',
+  'technical.blur_score': 'sharpness',
+  'technical.is_screenshot': 'screenshot',
+  'technical.is_graphic': 'graphic',
+  'quality_score': 'quality',
+  'people.count': 'people',
+  'texture_material': 'material',
+  'text_content.has_text': 'has text',
+  'subject': 'subject',
+  'description': '',
 }
 
 /**
- * Formats a QueryFilter into a human-readable chip label.
- * Uses short field names (last 2 segments) and operator symbols.
+ * Formats a QueryFilter into a natural language chip label.
+ * Value-only for well-known fields (tags, object labels). Category prefix for the rest.
  */
 export function formatChipLabel(filter: QueryFilter): string {
   const { field, operator, value } = filter
-  const shortField = field.replace(/\[\]\./, '.').split('.').slice(-2).join('.')
-
-  // Operators that use a word keyword need surrounding spaces;
-  // symbolic operators attach directly to the field name.
-  const opWord: Record<string, string> = { in: 'in' }
-  const opSymbol: Record<string, string> = {
-    eq: ':', neq: '≠', contains: ':', gte: '≥', lte: '≤', gt: '>', lt: '<',
-  }
 
   const displayVal = Array.isArray(value)
     ? value.join(', ')
     : String(value)
 
-  if (operator in opWord) {
-    return `${shortField} ${opWord[operator]} ${displayVal}`
+  const category = FIELD_LABELS[field]
+
+  // Fields where the value IS the label (tags, object labels, etc.)
+  if (category === '') {
+    if (operator === 'neq' || operator === 'lt' || operator === 'gt') {
+      return `not ${displayVal}`
+    }
+    if (operator === 'gte') return `≥ ${displayVal}`
+    if (operator === 'lte') return `≤ ${displayVal}`
+    return displayVal
   }
 
-  const sep = opSymbol[operator] ?? ':'
-  return `${shortField}${sep} ${displayVal}`
+  // people.count gets plain English labels instead of "people: 0" / "people ≥ 1"
+  if (field === 'people.count') {
+    if (operator === 'eq' && value === 0) return 'no people'
+    if (operator === 'gte' && value === 1) return 'people'
+    if (operator === 'gt' && value === 1) return 'group'
+    if (operator === 'gte' && Number(value) >= 2) return `${value}+ people`
+    if (operator === 'eq') return `${value} ${value === 1 ? 'person' : 'people'}`
+    return `people: ${displayVal}`
+  }
+
+  // Fields with a category prefix: "color: turquoise"
+  if (category !== undefined) {
+    if (operator === 'neq') return `not ${category}: ${displayVal}`
+    if (operator === 'gte') return `${category} ≥ ${displayVal}`
+    if (operator === 'lte') return `${category} ≤ ${displayVal}`
+    return `${category}: ${displayVal}`
+  }
+
+  // Fallback for unknown fields — use the last path segment
+  const shortField = field.replace(/\[\]\./, '.').split('.').slice(-1)[0]
+  return `${shortField}: ${displayVal}`
 }

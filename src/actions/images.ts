@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { uploadToImageKit } from '@/lib/imagekit/upload'
+import { uploadToImageKit, deleteFromImageKit } from '@/lib/imagekit/upload'
 import { extractExif } from '@/lib/exif/extract'
 import { inngest } from '@/lib/inngest/client'
 import type { Image, BaseLayerMetadata } from '@/types/domain'
@@ -52,11 +52,23 @@ export async function uploadImages(formData: FormData): Promise<{ imageIds: stri
 
       const { data, error } = await supabase
         .from('images')
-        .insert(row as never)
+        .upsert(row as never, { onConflict: 'storage_key', ignoreDuplicates: true })
         .select('id')
-        .single()
+        .maybeSingle()
 
-      if (error || !data) throw new Error(`Failed to create image row for ${file.name}: ${error?.message}`)
+      if (error) throw new Error(`Failed to create image row for ${file.name}: ${error.message}`)
+
+      // ignoreDuplicates returns null when skipped — fetch the existing row
+      if (!data) {
+        const { data: existing, error: fetchError } = await supabase
+          .from('images')
+          .select('id')
+          .eq('storage_key', row.storage_key)
+          .single()
+        if (fetchError || !existing) throw new Error(`Failed to find existing image row for ${file.name}`)
+        return (existing as Image).id
+      }
+
       return (data as Image).id
     }),
   )
@@ -81,4 +93,36 @@ export async function getImageMetadata(imageId: string): Promise<BaseLayerMetada
 
   if (error || !data?.metadata) return null
   return data.metadata as unknown as BaseLayerMetadata
+}
+
+export async function deleteImages(imageIds: string[]): Promise<void> {
+  if (imageIds.length === 0) return
+
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+
+  // Fetch storage keys — RLS ensures only owned images are returned
+  const { data: images, error: fetchError } = await supabase
+    .from('images')
+    .select('id, storage_key')
+    .in('id', imageIds)
+    .eq('user_id', user.id)
+
+  if (fetchError) throw new Error(`Failed to fetch images: ${fetchError.message}`)
+  if (!images || images.length === 0) return
+
+  const ownedIds = (images as Pick<Image, 'id' | 'storage_key'>[]).map((img) => img.id)
+  const storageKeys = (images as Pick<Image, 'id' | 'storage_key'>[]).map((img) => img.storage_key)
+
+  const { error: deleteError } = await supabase
+    .from('images')
+    .delete()
+    .in('id', ownedIds)
+
+  if (deleteError) throw new Error(`Failed to delete images: ${deleteError.message}`)
+
+  // Best-effort: ImageKit cleanup after DB delete succeeds
+  await deleteFromImageKit(storageKeys)
 }

@@ -9,7 +9,6 @@ import type { Json, TablesInsert } from '@/lib/supabase/types'
 import type { QueryPlan, QueryFilter } from '@/lib/gemini/query'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const CHAT_HISTORY_CONTEXT_LIMIT = 20
 const CHAT_HISTORY_PAGE_SIZE = 50
 
 export type SendMessageResult = {
@@ -27,27 +26,12 @@ export async function sendMessage(
   rollId: string,
   text: string,
   referenceImageIds?: string[],
+  activeFilters?: QueryFilter[],
 ): Promise<SendMessageResult> {
   const supabase = await createClient()
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) throw new Error('Unauthorized')
-
-  // Fetch history before saving the user message so the current turn does not
-  // appear twice in the context passed to interpretQuery (once in history, once
-  // as the explicit "Current query").
-  const { data: historyRows, error: historyError } = await supabase
-    .from('chat_messages')
-    .select('*')
-    .eq('roll_id', rollId)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(CHAT_HISTORY_CONTEXT_LIMIT)
-
-  if (historyError) throw new Error(`Failed to fetch chat history: ${historyError.message}`)
-
-  // Reverse to chronological order (oldest first) for the model.
-  const history = ((historyRows ?? []) as ChatMessage[]).reverse()
 
   const userRow: TablesInsert<'chat_messages'> = {
     roll_id: rollId,
@@ -76,9 +60,13 @@ export async function sendMessage(
     resultImages = await searchByImageReferences(referenceImageIds, rollId, text || undefined)
     total = resultImages.length
   } else {
-    const plan = await interpretQuery(text, history)
-    interpretedFilter = plan
-    const queryResult = await executeQuery(plan, rollId)
+    const plan = await interpretQuery(text)
+    // Merge client-held active filters with new filters from this query.
+    // Deduplication prevents the same filter appearing twice when the user
+    // refines a search that already has that filter active.
+    const mergedFilters = deduplicateFilters([...(activeFilters ?? []), ...plan.filters])
+    interpretedFilter = { ...plan, filters: mergedFilters }
+    const queryResult = await executeQuery(interpretedFilter, rollId)
     resultImages = queryResult.images
     total = queryResult.total
   }
@@ -218,6 +206,16 @@ async function saveAssistantMessage(
 
   if (error || !data) throw new Error(`Failed to save assistant message: ${error?.message}`)
   return data as ChatMessage
+}
+
+// Two filters are considered duplicates when they target the same field+operator+value.
+// Keeps the last occurrence so newer query filters win on exact conflicts.
+function deduplicateFilters(filters: QueryFilter[]): QueryFilter[] {
+  const seen = new Map<string, number>()
+  filters.forEach((f, i) => {
+    seen.set(`${f.field}|${f.operator}|${JSON.stringify(f.value)}`, i)
+  })
+  return filters.filter((_, i) => [...seen.values()].includes(i))
 }
 
 function buildAssistantContent(resultCount: number, plan: QueryPlan | null): string {

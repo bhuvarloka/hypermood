@@ -4,6 +4,10 @@ import type { QueryPlan } from '@/lib/gemini/query'
 import { IMAGES_TABLE_COLUMNS, buildClause, matchesFilter } from './query-executor.logic'
 import type { Image } from '@/types/domain'
 
+// Server-process cache: same semantic_search string always produces the same vector,
+// so we avoid re-calling the embedding API when the user removes/adds filter chips.
+const embeddingCache = new Map<string, number[]>()
+
 export type QueryResult = {
   images: Image[]
   total: number
@@ -16,7 +20,9 @@ export async function executeQuery(plan: QueryPlan, rollId: string): Promise<Que
   const clauses = filters.map(buildClause).filter((c): c is string => c !== null)
 
   if (semantic_search) {
-    const queryVector = await embedText(semantic_search)
+    const cached = embeddingCache.get(semantic_search)
+    const queryVector = cached ?? await embedText(semantic_search)
+    if (!cached) embeddingCache.set(semantic_search, queryVector)
     const vectorLiteral = `[${queryVector.join(',')}]`
 
     // Over-fetch proportionally so post-hoc slicing still reaches `limit` results

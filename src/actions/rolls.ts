@@ -1,8 +1,10 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { deleteFromImageKit, deleteFolderFromImageKit } from '@/lib/imagekit/upload'
 import type { Roll, RollWithImageCount } from '@/types/domain'
 import type { TablesInsert } from '@/lib/supabase/types'
+import type { Image } from '@/types/domain'
 
 export async function createRoll(name: string, description?: string): Promise<Roll> {
   const supabase = await createClient()
@@ -68,4 +70,34 @@ export async function listRolls(): Promise<RollWithImageCount[]> {
     image_count: image_count[0]?.count ?? 0,
     indexed_count: indexedByRoll.get(roll.id) ?? 0,
   }))
+}
+
+export async function deleteRoll(rollId: string): Promise<void> {
+  const supabase = await createClient()
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) throw new Error('Unauthorized')
+
+  // Collect storage keys before deleting — cascade will remove image rows
+  const { data: images, error: fetchError } = await supabase
+    .from('images')
+    .select('storage_key')
+    .eq('roll_id', rollId)
+    .eq('user_id', user.id)
+
+  if (fetchError) throw new Error(`Failed to fetch images for roll: ${fetchError.message}`)
+
+  // RLS enforces ownership; eq('user_id') is defense-in-depth
+  const { error: deleteError } = await supabase
+    .from('rolls')
+    .delete()
+    .eq('id', rollId)
+    .eq('user_id', user.id)
+
+  if (deleteError) throw new Error(`Failed to delete roll: ${deleteError.message}`)
+
+  // Best-effort: ImageKit cleanup after DB delete succeeds
+  const storageKeys = (images as Pick<Image, 'storage_key'>[]).map((img) => img.storage_key)
+  await deleteFromImageKit(storageKeys)
+  await deleteFolderFromImageKit(`hypermood/rolls/${rollId}`)
 }

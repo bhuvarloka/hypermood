@@ -27,13 +27,15 @@ export default async function RollDetailPage({ params }: Props) {
     .from('images')
     .select('*')
     .eq('roll_id', rollId)
-    .order('created_at', { ascending: false })
+    .order('uploaded_at', { ascending: false })
 
   return (
-    <CommandCenter
-      rollId={rollId}
-      roll={roll as Roll}
-      initialImages={(images ?? []) as ImageRecord[]}
-    />
+    <div className="flex flex-col flex-1 min-h-0">
+      <CommandCenter
+        rollId={rollId}
+        roll={roll as Roll}
+        initialImages={(images ?? []) as ImageRecord[]}
+      />
+    </div>
   )
 }

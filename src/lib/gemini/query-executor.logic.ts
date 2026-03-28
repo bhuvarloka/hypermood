@@ -71,8 +71,11 @@ export function buildClause(filter: QueryFilter): string | null {
     const arrayField = field.split('[]')[0]
     const leafField = field.split('[].')[1]
     if (!leafField) return null
-    const jsonValue = JSON.stringify([{ [leafField]: value }])
-    return `(im.metadata->'${arrayField}' @> '${jsonValue}'::jsonb)`
+    const escaped = String(value).replace(/'/g, "''")
+    // Use EXISTS + jsonb_array_elements for substring matching on string leaf fields
+    // (e.g. label "porcelain vase" must match a search for "vase").
+    // @> containment requires exact equality and would miss partial labels.
+    return `(EXISTS (SELECT 1 FROM jsonb_array_elements(im.metadata->'${arrayField}') AS elem WHERE (elem->>'${leafField}') ilike '%${escaped}%'))`
   }
 
   if (operator === 'contains') {
@@ -128,10 +131,15 @@ export function matchesFilter(meta: Record<string, unknown>, filter: QueryFilter
     if (!leafField) return true
     const arr = getNestedValue(meta, arrayField)
     if (!Array.isArray(arr)) return false
-    return arr.some(item =>
-      typeof item === 'object' && item !== null &&
-      (item as Record<string, unknown>)[leafField] === value
-    )
+    return arr.some(item => {
+      if (typeof item !== 'object' || item === null) return false
+      const itemValue = (item as Record<string, unknown>)[leafField]
+      // Use substring match for string fields (e.g. label "porcelain vase" should match "vase")
+      if (typeof itemValue === 'string') {
+        return itemValue.toLowerCase().includes(String(value).toLowerCase())
+      }
+      return itemValue === value
+    })
   }
 
   const actual = getNestedValue(meta, field)

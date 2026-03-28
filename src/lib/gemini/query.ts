@@ -1,7 +1,6 @@
 import { ai, tryParseJson } from './parse-utils'
 import { validateQueryPlan, DEFAULT_PLAN } from './query.validate'
 import type { QueryPlan } from './query.validate'
-import type { ChatMessage } from '@/types/domain'
 
 const QUERY_MODEL = process.env.GEMINI_QUERY_MODEL ?? 'gemini-3-flash-preview'
 
@@ -77,29 +76,21 @@ VALID OPERATORS:
 RULES:
 1. Prefer "semantic_search" for vague or conceptual queries ("happy moments", "travel vibes", "something calm"). Use filters for precise structural criteria.
 2. Combine both when the query has both a conceptual element AND precise criteria.
-3. For queries about specific objects or labels, use "contains" on "objects" (field: "objects[].label").
-4. For tags, use "contains" on "tags".
-5. For text in images, use "contains" on "text_content.text_strings".
-6. For clothing queries, use "contains" on "people.descriptions[].clothing".
-7. Keep filters minimal — only add what was explicitly or strongly implied by the query. Over-filtering excludes relevant results.
+3. For queries about specific objects, things, or items (e.g. "vase", "cat", "car"), generate TWO filters: one "contains" on "objects[].label" AND one "contains" on "tags". Also set semantic_search to the item name. This ensures partial label matches (e.g. "porcelain vase") and tag matches both find the image.
+4. For text in images, use "contains" on "text_content.text_strings".
+5. For clothing queries, use "contains" on "people.descriptions[].clothing".
+6. Keep filters minimal — only add what was explicitly or strongly implied by the query. Over-filtering excludes relevant results.
+7. For queries about people being present ("portraits", "people", "faces", "someone", "a person"), use { field: "people.count", operator: "gte", value: 1 }. Only use "eq" with value 0 when the query explicitly asks for NO people ("without people", "no people", "empty scenes").
 8. limit: default 50, max 200. Increase for "show me all" style requests.
 9. For greetings, questions about the system, or completely non-search messages: return filters=[], semantic_search=null, sort=null, limit=50, and explain in clarification_note.
 10. For ambiguous queries: return your best-effort plan AND set clarification_note explaining what you assumed.
 11. Always include followups: 2-3 short contextual follow-up queries that reference what was just searched. They must be specific to the current query — not generic. Examples: if the query was about outdoor scenes, suggest "Narrow to golden hour only" or "Without people". If the query returns people, suggest "Show only close-ups" or "Split by time of day". For greetings/non-search queries, followups may be empty.
+12. Translate ONLY the current query into filters. Do not carry over, inherit, or reference any prior filters — the caller handles filter accumulation. Treat every query as an independent translation task.
 
 Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Just the JSON.`
 
-function buildUserPrompt(query: string, chatHistory: ChatMessage[]): string {
-  const historyContext = chatHistory.length > 0
-    ? `Recent conversation (most recent last):\n${
-        chatHistory
-          .slice(-8)
-          .map(m => `${m.role}: ${m.content}`)
-          .join('\n')
-      }\n\n`
-    : ''
-
-  return `${historyContext}Current query: "${query}"
+function buildUserPrompt(query: string): string {
+  return `Translate this query into a JSON filter plan: "${query}"
 
 Return a JSON object with exactly this structure:
 
@@ -119,17 +110,14 @@ Return a JSON object with exactly this structure:
 }`
 }
 
-export async function interpretQuery(
-  query: string,
-  chatHistory: ChatMessage[],
-): Promise<QueryPlan> {
+export async function interpretQuery(query: string): Promise<QueryPlan> {
   // On any failure, degrade to pure semantic search so chat always returns results
   const errorFallback: QueryPlan = { ...DEFAULT_PLAN, semantic_search: query }
 
   try {
     const response = await ai.models.generateContent({
       model: QUERY_MODEL,
-      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(query, chatHistory) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(query) }] }],
       config: {
         systemInstruction: SYSTEM_PROMPT,
         responseMimeType: 'application/json',

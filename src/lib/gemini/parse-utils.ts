@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 
-export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+export const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
 
 export function tryParseJson(raw: string): unknown | null {
   try {

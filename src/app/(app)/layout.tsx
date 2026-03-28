@@ -21,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         thumbnails={thumbnails}
         userEmail={user.email ?? ''}
       />
-      <main className="flex-1 overflow-y-auto bg-white">
+      <main className="flex-1 overflow-hidden bg-white flex flex-col">
         {children}
       </main>
     </div>

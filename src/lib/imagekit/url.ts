@@ -1,6 +1,3 @@
-import { buildSrc } from "@imagekit/next";
-import type { Transformation } from "@imagekit/next";
-
 export type ImageTransforms = {
   width?: number;
   height?: number;
@@ -18,9 +15,15 @@ export function getImageUrl(
     throw new Error("NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT is not configured");
   }
 
-  const transformation: Transformation[] | undefined = transforms
-    ? [{ width: transforms.width, height: transforms.height, quality: transforms.quality, format: transforms.format }]
-    : undefined;
+  const base = urlEndpoint.replace(/\/$/, "") + storageKey;
 
-  return buildSrc({ urlEndpoint, src: storageKey, transformation });
+  if (!transforms) return base;
+
+  const parts: string[] = [];
+  if (transforms.width) parts.push(`w-${transforms.width}`);
+  if (transforms.height) parts.push(`h-${transforms.height}`);
+  if (transforms.quality) parts.push(`q-${transforms.quality}`);
+  if (transforms.format) parts.push(`f-${transforms.format}`);
+
+  return parts.length > 0 ? `${base}?tr=${parts.join(",")}` : base;
 }
