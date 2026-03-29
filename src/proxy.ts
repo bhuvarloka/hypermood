@@ -56,6 +56,6 @@ export const config = {
      * Match all request paths except static files and Next.js internals.
      * This ensures session is refreshed on every navigation.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

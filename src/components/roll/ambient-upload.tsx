@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { uploadImages } from '@/actions/images'
 
 type Props = {
   rollId: string
@@ -69,7 +68,8 @@ export function AmbientUpload({ rollId, children }: Props) {
           const fd = new FormData()
           fd.append('rollId', rollId)
           batch.forEach((f) => fd.append('files', f))
-          await uploadImages(fd)
+          const res = await fetch('/api/images/upload', { method: 'POST', body: fd })
+          if (!res.ok) throw new Error(await res.text())
           done += batch.length
           setState({ phase: 'uploading', done, total: files.length })
         }

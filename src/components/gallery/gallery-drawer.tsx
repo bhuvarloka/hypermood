@@ -210,6 +210,30 @@ function GalleryRow({
 }
 
 // ---------------------------------------------------------------------------
+// Copy button
+// ---------------------------------------------------------------------------
+
+function CopyButton({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = useCallback(() => {
+    navigator.clipboard.writeText(`${window.location.origin}/g/${slug}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [slug])
+
+  return (
+    <button
+      onClick={copy}
+      className="text-base font-mono text-primary-200 animate-swiss hover:text-primary-900 shrink-0"
+      aria-label="Copy public link"
+    >
+      {copied ? 'copied!' : 'copy'}
+    </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Gallery detail
 // ---------------------------------------------------------------------------
 
@@ -346,16 +370,19 @@ function GalleryDetail({
           {gallery.is_public ? 'public' : 'private'}
         </button>
 
-        {/* Public link */}
+        {/* Public link + copy */}
         {gallery.is_public && (
-          <a
-            href={`/g/${gallery.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-base font-mono text-semantic-info animate-swiss hover:opacity-70 truncate"
-          >
-            /g/{gallery.slug}
-          </a>
+          <div className="flex items-center gap-2 min-w-0">
+            <a
+              href={`/g/${gallery.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-base font-mono text-semantic-info animate-swiss hover:opacity-70 truncate"
+            >
+              /g/{gallery.slug}
+            </a>
+            <CopyButton slug={gallery.slug} />
+          </div>
         )}
       </div>
 
