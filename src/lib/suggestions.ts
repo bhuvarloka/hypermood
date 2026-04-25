@@ -34,7 +34,7 @@ async function aggregateRollStats(rollId: string): Promise<RollStats> {
 
   if (error) throw new Error(`Failed to fetch metadata for roll ${rollId}: ${error.message}`)
 
-  const rows = (data ?? []) as { metadata: BaseLayerMetadata }[]
+  const rows = (data ?? []) as unknown as { metadata: BaseLayerMetadata }[]
 
   const settingCounts: Record<string, number> = {}
   const timeOfDayCounts: Record<string, number> = {}
