@@ -27,14 +27,13 @@ type CellData = {
   onDelete?: (id: string) => void;
 };
 
-function ImageCell({ data, width }: MasonryRenderProps<CellData>) {
+function ImageCell({ data }: MasonryRenderProps<CellData>) {
   const { image, isSelected, onImageClick, onFullscreen, onDelete } = data;
   const src = getImageUrl(image.storage_key, { width: 400, quality: 80 });
   const lqip = getLqipUrl(image.storage_key);
 
   const w = image.width ?? 400;
   const h = image.height ?? 300;
-  const cellHeight = Math.round((width / w) * h);
 
   const ringClass = isSelected ? "ring-2 ring-semantic-info ring-offset-2" : "";
 
@@ -58,10 +57,9 @@ function ImageCell({ data, width }: MasonryRenderProps<CellData>) {
         width={w}
         height={h}
         sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-        className="w-full h-auto rounded-none"
+        className="w-full h-auto rounded-none block"
         placeholder="blur"
         blurDataURL={lqip}
-        style={{ height: cellHeight }}
       />
 
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 animate-bloom flex gap-1">

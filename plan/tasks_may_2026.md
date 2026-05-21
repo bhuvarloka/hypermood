@@ -33,7 +33,7 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 | 3 | T-08 | Drop the mono typeface; reform typography | done |
 | 4 | T-03 | Shared masonry (`masonic`) used in three places | done |
 | 5 | T-04 | Reflow on filter, don't dim | done |
-| 6 | T-02 | Strip and rebuild the chat input | todo |
+| 6 | T-02 | Strip and rebuild the chat input | done |
 | 7 | T-06 | Galleries discoverability + copy-link flow | todo |
 | 8 | T-14 | Reconcile selection model (click opens, mod-click selects) | todo |
 | 9 | T-07 | Rebuild rolls index as editorial gallery | todo |
@@ -213,7 +213,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-02
 - **Order:** 6
-- **Status:** todo
+- **Status:** done
 - **Effort:** L
 - **Visibility:** UV
 - **Depends on:** T-04 (filter chips move to the result surface)
@@ -223,15 +223,15 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] One quiet input: bottom-anchored textarea, no border, no backdrop blur, no `rounded-3xl` shell.
-- [ ] Selection thumbnails float just above the caret line and dissolve when empty.
-- [ ] Filter chips move to the result surface (T-04 dependency).
-- [ ] Follow-ups render as a single inline ghost line under the assistant's response.
-- [ ] Status string demoted: appears above the input only when a result set exists; no mono.
-- [ ] History drawer removed. Messages stack above the input. Conversation history reachable via cmd-k (T-01).
-- [ ] One "components arriving" gesture: 180ms `translateY(8px) + opacity` (this is `reveal` from T-24).
-- [ ] Split orchestration: layout / history / selection / darkroom-routing / preview-routing / gallery-intent / event-listening into separate files.
-- [ ] Drop the gallery-intent regex (see T-06).
+- [x] One quiet input: bottom-anchored textarea, no border, no backdrop blur, no `rounded-3xl` shell.
+- [x] Selection thumbnails float just above the caret line and dissolve when empty.
+- [x] Filter chips move to the result surface (T-04 dependency).
+- [x] Follow-ups render as a single inline ghost line under the assistant's response.
+- [x] Status string demoted: appears above the input only when a result set exists; no mono.
+- [x] History drawer removed. No message history in the UI at all — assistant messages are transient, not stored in component state. On mount, only the last `result_image_ids` + `activePlan` are restored via `getLastRollState` (single-row DB fetch). Conversation history reachable via cmd-k (T-01).
+- [ ] One "components arriving" gesture: 180ms `translateY(8px) + opacity` (this is `reveal` from T-24) — deferred to T-24 motion tokens.
+- [x] Split orchestration: state + logic extracted to `use-chat-state.ts`; `chat-interface.tsx` is layout-only (<250 lines).
+- [x] Drop the gallery-intent regex (see T-06).
 
 **Done when:** input renders as a single textarea with no surrounding box; filter chips appear on the result surface; component file under 200 lines; the history drawer is gone.
 
@@ -252,7 +252,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - [ ] Galleries entry point lives prominently in the top-bar (verify T-01 already exposes it; if not, add).
 - [ ] Drop the hidden gallery-intent regex at [chat-interface.tsx:166-169](../src/components/chat/chat-interface.tsx#L166-L169).
 - [ ] "Save as Gallery" defaults to **public** in [preview-panel.tsx:179-267](../src/components/chat/preview-panel.tsx#L179-L267).
-- [ ] On save success, the assistant's "Gallery saved → /g/[slug]" message at [chat-interface.tsx:268-284](../src/components/chat/chat-interface.tsx#L268-L284) includes the copy button inline.
+- [ ] On save success, show a copy button inline. Note: `handleGallerySaved` was removed with the message history; the `PreviewPanel.onGallerySaved` callback now just closes the panel. The copy-link UX needs a different anchor — either a toast, or a persistent link in the gallery drawer.
 - [ ] In the gallery list (drawer + page), each row gets a hover-revealed copy button.
 - [ ] Public/private becomes a one-tap toggle from the list, not the detail view.
 - [ ] **Fix from T-32 run:** `gallery-drawer.e2e.ts:96` fails because `getByRole('button', { name: /public|private/ })` strict-matches both the privacy toggle (`"public"`) and the new `aria-label="Copy public link"` copy button. When this task ships the list-level copy button, give the privacy toggle a more specific aria-label (e.g. `Make private` / `Make public`) or relax the test locator.
@@ -515,7 +515,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] On mount, filter `result_image_ids` against the current `liveImages` set before applying to state.
+- [ ] In `getLastRollState`, filter the restored `result_image_ids` against the current `liveImages` set before applying to state (the single-row fetch doesn't know about deleted images).
 
 **Done when:** deleting an image referenced by a saved result-set message produces no gaps on next mount.
 

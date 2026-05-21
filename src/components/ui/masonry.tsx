@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   usePositioner,
   useMasonry,
@@ -26,10 +26,26 @@ type Props<T> = {
   className?: string;
 };
 
-export function Masonry<T>({
+export function Masonry<T>(props: Props<T>) {
+  const [mounted, setMounted] = useState(false);
+  // resetKey increments when items shrinks, forcing MasonryInner to remount with a fresh positioner
+  const resetKey = useRef(0);
+  const prevLen = useRef(props.items.length);
+
+  if (props.items.length < prevLen.current) {
+    resetKey.current += 1;
+  }
+  prevLen.current = props.items.length;
+
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return <MasonryInner key={resetKey.current} {...props} />;
+}
+
+function MasonryInner<T>({
   items,
   getKey,
-  getAspectRatio: _getAspectRatio,
+  getAspectRatio,
   renderItem,
   columnWidth = 240,
   maxColumnCount,
@@ -47,11 +63,10 @@ export function Masonry<T>({
 
   const resizeObserver = useResizeObserver(positioner);
 
-  // Estimated height based on aspect ratio for the column width
   const columnW = positioner.columnWidth || columnWidth;
   const avgHeight =
     items.length > 0
-      ? items.reduce((sum, item) => sum + columnW / (_getAspectRatio(item) || 1), 0) /
+      ? items.reduce((sum, item) => sum + columnW / (getAspectRatio(item) || 1), 0) /
         items.length
       : 300;
 
@@ -59,7 +74,7 @@ export function Masonry<T>({
     positioner,
     resizeObserver,
     items,
-    height: typeof window !== "undefined" ? window.innerHeight : 800,
+    height: window.innerHeight,
     scrollTop,
     isScrolling,
     overscanBy: 2,

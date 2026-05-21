@@ -122,6 +122,30 @@ export async function getChatHistory(
   return ((data ?? []) as ChatMessage[]).reverse()
 }
 
+export async function getLastRollState(rollId: string): Promise<{
+  resultImageIds: string[] | null
+  activePlan: import('@/lib/gemini/query').QueryPlan | null
+}> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return { resultImageIds: null, activePlan: null }
+
+  const { data } = await supabase
+    .from('chat_messages')
+    .select('result_image_ids, interpreted_filter')
+    .eq('roll_id', rollId)
+    .eq('user_id', user.id)
+    .eq('role', 'assistant')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return {
+    resultImageIds: (data?.result_image_ids as string[] | null) ?? null,
+    activePlan: (data?.interpreted_filter as import('@/lib/gemini/query').QueryPlan | null) ?? null,
+  }
+}
+
 export type FilterMod =
   | { type: 'remove'; index: number }
   | { type: 'add'; filter: QueryFilter }
