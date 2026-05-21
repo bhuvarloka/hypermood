@@ -79,7 +79,7 @@ export function NewRollButton() {
           autoComplete="off"
           className="text-base border border-primary-200 px-3 py-2 w-52 rounded-none focus:outline-none focus:ring-2 focus:ring-primary-900"
         />
-        {error && <p className="text-base font-mono text-semantic-alert">{error}</p>}
+        {error && <p className="text-sm text-semantic-alert">{error}</p>}
       </div>
 
       <div className="flex gap-2 pt-0.5">

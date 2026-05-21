@@ -35,7 +35,7 @@ export function ProcessingIndicator({ isImagePrompt, imageCount, matchCount }: P
     <div className="flex justify-start">
       <div className="max-w-[70%] bg-white text-lg px-4 py-3 rounded-2xl border border-primary-100 flex flex-col gap-1">
         {lines.slice(0, visibleCount).map((line) => (
-          <span key={line} className="animate-bloom block text-base font-mono text-primary-200">
+          <span key={line} className="animate-bloom block text-sm text-primary-400">
             {line}
           </span>
         ))}

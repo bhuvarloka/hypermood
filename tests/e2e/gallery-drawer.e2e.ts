@@ -9,7 +9,8 @@ import { test, expect } from '@playwright/test'
 async function openGalleryDrawer(page: import('@playwright/test').Page) {
   await page.goto('/rolls')
   await page.waitForLoadState('networkidle')
-  await page.getByRole('button', { name: 'Galleries' }).click()
+  await page.getByRole('button', { name: 'Hypermood' }).click()
+  await page.getByRole('menuitem', { name: 'Galleries' }).click()
   // Wait for drawer to animate in
   await page.waitForTimeout(300)
 }
@@ -19,7 +20,7 @@ test.describe('Gallery Drawer — list view', () => {
     await openGalleryDrawer(page)
   })
 
-  test('drawer opens from the Rail "Galleries" button', async ({ page }) => {
+  test('drawer opens from the settings "Galleries" menu item', async ({ page }) => {
     await expect(page.locator('.fixed.inset-y-0.right-0')).toBeVisible()
   })
 

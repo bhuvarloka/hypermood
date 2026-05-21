@@ -31,8 +31,9 @@ test.describe('Public gallery — page structure', () => {
     await expect(page.getByText('Hypermood')).toBeVisible()
   })
 
-  test('does NOT show the Rail (no auth chrome)', async ({ page }) => {
-    await expect(page.getByRole('navigation')).not.toBeVisible()
+  test('does NOT show the authed app top-bar (no auth chrome)', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Open switcher' })).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0)
   })
 
   test('renders images', async ({ page }) => {

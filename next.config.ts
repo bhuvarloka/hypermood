@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
     // Enables unauthorized() and forbidden() for auth interrupts in Server Components.
     authInterrupts: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

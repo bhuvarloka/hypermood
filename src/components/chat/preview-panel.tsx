@@ -163,7 +163,6 @@ export function PreviewPanel({ images, rollId, onClose, onGallerySaved }: Props)
                     alt={img.original_filename ?? ''}
                     width={400}
                     height={300}
-                    unoptimized
                     className="w-full rounded-none object-cover"
                   />
                 </div>
@@ -222,14 +221,14 @@ function SaveForm({
         <button
           onClick={onCancel}
           disabled={saving}
-          className="shrink-0 text-base font-mono text-primary-400 px-2 py-2 animate-swiss hover:text-primary-900 disabled:opacity-50"
+          className="shrink-0 text-sm text-primary-400 px-2 py-2 animate-swiss hover:text-primary-900 disabled:opacity-50"
         >
           ✕
         </button>
       </div>
 
       <div className="flex gap-3 items-center">
-        <div className="flex gap-1 text-base font-mono">
+        <div className="flex gap-1 text-sm font-medium">
           {(['masonry', 'timeline'] as GalleryLayout[]).map((opt) => (
             <button
               key={opt}
@@ -249,7 +248,7 @@ function SaveForm({
         <button
           onClick={() => onPublicChange(!isPublic)}
           disabled={saving}
-          className={`text-base font-mono px-3 py-1 border animate-swiss ${
+          className={`text-sm font-medium px-3 py-1 border animate-swiss ${
             isPublic
               ? 'border-primary-900 bg-primary-900 text-white'
               : 'border-primary-200 text-primary-600 hover:bg-primary-50'
@@ -260,7 +259,7 @@ function SaveForm({
       </div>
 
       {error && (
-        <span className="text-base font-mono text-semantic-alert">{error}</span>
+        <span className="text-sm text-semantic-alert">{error}</span>
       )}
     </div>
   )

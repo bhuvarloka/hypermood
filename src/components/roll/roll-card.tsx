@@ -30,7 +30,6 @@ export function RollCard({ roll, storageKeys }: Props) {
                 fill
                 sizes="32px"
                 className="object-cover"
-                unoptimized
               />
             </div>
           ) : (
@@ -43,19 +42,19 @@ export function RollCard({ roll, storageKeys }: Props) {
       <div className="flex-1 min-w-0">
         <p className="text-3xl font-medium truncate">{roll.name}</p>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-base font-mono">
+          <span className="text-sm tracking-tight tabular-nums text-primary-400">
             {roll.image_count.toLocaleString()} {roll.image_count === 1 ? 'image' : 'images'}
           </span>
           {isPending && (
-            <span className="text-base font-mono">· pending</span>
+            <span className="text-sm tracking-tight tabular-nums text-primary-400">· pending</span>
           )}
           {isIndexing && (
-            <span className="text-base font-mono text-semantic-success">
+            <span className="text-sm tracking-tight tabular-nums text-primary-400">
               · {roll.indexed_count}/{roll.image_count} indexed
             </span>
           )}
           {isComplete && (
-            <span className="text-base font-mono text-semantic-success">· {roll.indexed_count.toLocaleString()} indexed</span>
+            <span className="text-sm tracking-tight tabular-nums text-primary-400">· {roll.indexed_count.toLocaleString()} indexed</span>
           )}
         </div>
       </div>

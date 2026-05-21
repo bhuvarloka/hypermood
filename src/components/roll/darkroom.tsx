@@ -99,7 +99,6 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
           alt={image.original_filename ?? ''}
           width={2000}
           height={2000}
-          unoptimized
           className="max-w-full max-h-full object-contain"
           style={{ width: 'auto', height: 'auto', maxWidth: '100vw', maxHeight: '100vh' }}
           priority
@@ -108,7 +107,7 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
         {/* Dark/light toggle — top-right */}
         <button
           onClick={() => setIsDark((v) => !v)}
-          className={`absolute top-4 right-4 text-lg font-mono px-3 py-1 animate-swiss ${textColor} hover:opacity-70`}
+          className={`absolute top-4 right-4 text-sm px-3 py-1 animate-swiss ${textColor} hover:opacity-70`}
           aria-label={isDark ? 'Switch to light background' : 'Switch to dark background'}
         >
           {isDark ? '○' : '●'}
@@ -117,7 +116,7 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
         {/* Close — top-left */}
         <button
           onClick={onClose}
-          className={`absolute top-4 left-4 text-lg font-mono px-3 py-1 animate-swiss ${textColor} hover:opacity-70`}
+          className={`absolute top-4 left-4 text-sm px-3 py-1 animate-swiss ${textColor} hover:opacity-70`}
           aria-label="Close"
         >
           ✕
@@ -176,7 +175,7 @@ function EdgeHoverZone({
     >
       {/* Conditional render so animate-bloom fires on every hover entry */}
       {hovered && (
-        <span className={`text-3xl font-mono animate-bloom ${textColor}`}>
+        <span className={`text-3xl font-light animate-bloom ${textColor}`}>
           {arrow}
         </span>
       )}
@@ -233,11 +232,11 @@ function BottomHoverPanel({
           onMouseLeave={() => setHovered(false)}
         >
           {metaLoading ? (
-            <span className={`text-lg font-mono ${textColor}`}>Loading…</span>
+            <span className={`text-sm tabular-nums text-primary-400`}>Loading…</span>
           ) : metaFailed ? (
-            <span className={`text-lg font-mono ${textColor}`}>Metadata unavailable</span>
+            <span className={`text-sm tabular-nums text-primary-400`}>Metadata unavailable</span>
           ) : (
-            <div className={`flex flex-wrap gap-x-8 gap-y-2 text-lg font-mono ${textColor}`}>
+            <div className={`flex flex-wrap gap-x-8 gap-y-2 text-sm tabular-nums ${textColor}`}>
               <span>{image.original_filename}</span>
 
               {(image.width && image.height) ? (

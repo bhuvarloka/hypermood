@@ -93,7 +93,7 @@ export function GalleryDrawer({ onClose, rollId, initialGalleryId }: Props) {
           {view.kind === 'detail' ? (
             <button
               onClick={() => setView({ kind: 'list' })}
-              className="text-base font-mono text-primary-200 animate-swiss hover:text-primary-900"
+              className="text-sm text-primary-400 animate-swiss hover:text-primary-900"
             >
               ← back
             </button>
@@ -113,7 +113,7 @@ export function GalleryDrawer({ onClose, rollId, initialGalleryId }: Props) {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="text-base font-mono text-primary-200 px-6">Loading…</p>
+            <p className="text-sm text-primary-400 px-6">Loading…</p>
           ) : view.kind === 'list' ? (
             <GalleryList
               galleries={galleries}
@@ -146,7 +146,7 @@ function GalleryList({
 }) {
   if (galleries.length === 0) {
     return (
-      <p className="text-base font-mono text-primary-200 px-6">No galleries yet.</p>
+      <p className="text-sm text-primary-400 px-6">No galleries yet.</p>
     )
   }
 
@@ -192,7 +192,7 @@ function GalleryRow({
 
         <div className="flex-1 min-w-0">
           <p className="text-lg truncate">{gallery.name}</p>
-          <p className="text-base font-mono text-primary-200">
+          <p className="text-sm tabular-nums text-primary-400">
             {gallery.image_count} {gallery.image_count === 1 ? 'image' : 'images'}
             {' · '}
             <span className={gallery.is_public ? 'text-semantic-info' : ''}>
@@ -225,7 +225,7 @@ function CopyButton({ slug }: { slug: string }) {
   return (
     <button
       onClick={copy}
-      className="text-base font-mono text-primary-200 animate-swiss hover:text-primary-900 shrink-0"
+      className="text-sm text-primary-400 animate-swiss hover:text-primary-900 shrink-0"
       aria-label="Copy public link"
     >
       {copied ? 'copied!' : 'copy'}
@@ -334,7 +334,7 @@ function GalleryDetail({
             {gallery.name}
           </button>
         )}
-        <p className="text-base font-mono text-primary-200 mt-1">
+        <p className="text-sm tabular-nums text-primary-400 mt-1">
           {images.length} {images.length === 1 ? 'image' : 'images'}
         </p>
       </div>
@@ -342,7 +342,7 @@ function GalleryDetail({
       {/* Controls */}
       <div className="flex items-center gap-4">
         {/* Layout toggle */}
-        <div className="flex border border-primary-200 text-base font-mono">
+        <div className="flex border border-primary-200 text-sm">
           {(['masonry', 'timeline'] as const).map((l) => (
             <button
               key={l}
@@ -361,7 +361,7 @@ function GalleryDetail({
         <button
           onClick={togglePublic}
           disabled={saving}
-          className={`text-base font-mono px-3 py-1 border animate-swiss ${
+          className={`text-sm px-3 py-1 border animate-swiss ${
             gallery.is_public
               ? 'border-semantic-info text-semantic-info hover:bg-primary-50'
               : 'border-primary-200 text-primary-200 hover:text-primary-900 hover:border-primary-900'
@@ -377,7 +377,7 @@ function GalleryDetail({
               href={`/g/${gallery.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-base font-mono text-semantic-info animate-swiss hover:opacity-70 truncate"
+              className="text-sm tabular-nums text-semantic-info animate-swiss hover:opacity-70 truncate"
             >
               /g/{gallery.slug}
             </a>
@@ -406,7 +406,6 @@ function GalleryDetail({
                 alt={img.original_filename ?? ''}
                 width={120}
                 height={120}
-                unoptimized
                 className="w-full aspect-square object-cover"
               />
               <button
@@ -420,7 +419,7 @@ function GalleryDetail({
           ))}
         </div>
       ) : (
-        <p className="text-base font-mono text-primary-200">No images in this gallery.</p>
+        <p className="text-sm text-primary-400">No images in this gallery.</p>
       )}
     </div>
   )

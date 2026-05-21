@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { getImageUrl } from '@/lib/imagekit/url'
+import { getImageUrl, getLqipUrl } from '@/lib/imagekit/url'
 import type { GalleryWithImages, Image as ImageRecord } from '@/types/domain'
+import { Masonry, type MasonryRenderProps } from '@/components/ui/masonry'
 
 type ViewMode = 'masonry' | 'timeline'
 
@@ -72,7 +73,7 @@ export function PublicGalleryView({ gallery }: Props) {
       <main className="flex-1">
         {gallery.images.length === 0 ? (
           <div className="flex items-center justify-center py-32">
-            <p className="text-lg font-mono text-primary-200">No images in this gallery.</p>
+            <p className="text-2xl font-medium text-primary-200">No images in this gallery.</p>
           </div>
         ) : mode === 'masonry' ? (
           <MasonryGrid images={gallery.images} />
@@ -107,13 +108,27 @@ function ModeButton({
   )
 }
 
+function GalleryMasonryCell({ data, width }: MasonryRenderProps<ImageRecord & { index: number }>) {
+  const { index, ...image } = data
+  return <GalleryImage image={image} index={index} width={width} />
+}
+
 function MasonryGrid({ images }: { images: ImageRecord[] }) {
+  const items = images.map((img, i) => ({ ...img, index: i }))
   return (
-    <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-16 p-8 md:p-16">
-      {images.map((image, i) => (
-        <GalleryImage key={image.id} image={image} index={i} className="break-inside-avoid mb-16" />
-      ))}
-    </div>
+    <Masonry
+      items={items}
+      getKey={(item) => item.id}
+      getAspectRatio={(item) => {
+        const w = item.width ?? 1
+        const h = item.height ?? 1
+        return w / h
+      }}
+      renderItem={GalleryMasonryCell}
+      columnWidth={320}
+      gap={64}
+      className="p-8 md:p-16"
+    />
   )
 }
 
@@ -123,18 +138,17 @@ function TimelineStrip({ images }: { images: ImageRecord[] }) {
       {/* Large screens: horizontal scroll */}
       <div className="hidden md:flex flex-row overflow-x-auto items-center gap-2 px-8 py-16 min-h-screen">
         {images.map((image, i) => (
-          <GalleryImage
-            key={image.id}
-            image={image}
-            index={i}
-            className="flex-none lg:w-1/4 md:w-1/3"
-          />
+          <div key={image.id} className="flex-none lg:w-1/4 md:w-1/3">
+            <GalleryImage image={image} index={i} />
+          </div>
         ))}
       </div>
       {/* Mobile: vertical stack */}
       <div className="flex md:hidden flex-col gap-2 p-4">
         {images.map((image, i) => (
-          <GalleryImage key={image.id} image={image} index={i} className="w-full" />
+          <div key={image.id} className="w-full">
+            <GalleryImage image={image} index={i} />
+          </div>
         ))}
       </div>
     </>
@@ -144,21 +158,22 @@ function TimelineStrip({ images }: { images: ImageRecord[] }) {
 function GalleryImage({
   image,
   index,
-  className = '',
+  width: renderWidth,
 }: {
   image: ImageRecord
   index: number
-  className?: string
+  width?: number
 }) {
-  // Larger transforms for the public gallery — editorial quality
   const src = getImageUrl(image.storage_key, { width: 1200, quality: 85, format: 'webp' })
+  const lqip = getLqipUrl(image.storage_key)
 
   const w = image.width ?? 800
   const h = image.height ?? 600
+  const cellHeight = renderWidth ? Math.round((renderWidth / w) * h) : undefined
 
   return (
     <div
-      className={`animate-bloom ${className}`}
+      className="animate-bloom"
       style={{ animationDelay: `${Math.min(index * 30, 600)}ms` }}
     >
       <Image
@@ -168,8 +183,12 @@ function GalleryImage({
         height={h}
         sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
         className="w-full h-auto rounded-none"
-        unoptimized
-        style={{ viewTransitionName: `gallery-image-${image.id}` }}
+        placeholder="blur"
+        blurDataURL={lqip}
+        style={{
+          viewTransitionName: `gallery-image-${image.id}`,
+          ...(cellHeight ? { height: cellHeight } : {}),
+        }}
       />
     </div>
   )

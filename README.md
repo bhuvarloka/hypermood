@@ -14,6 +14,17 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## End-to-end tests
+
+```bash
+pnpm exec playwright install chromium   # one-time, downloads the browser
+cp .env.test.local.example .env.test.local
+# Fill in: TEST_USER_EMAIL, TEST_ROLL_ID, TEST_PUBLIC_GALLERY_SLUG,
+# plus the same NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY from .env.local.
+# Auth uses the service-role key to mint a session (no OTP needed).
+pnpm test:e2e
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

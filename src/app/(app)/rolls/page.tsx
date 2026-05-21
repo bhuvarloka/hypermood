@@ -19,9 +19,9 @@ export default async function RollsPage() {
       </div>
 
       <div className="flex gap-8 mb-10">
-        <Stat label="rolls" value={rolls.length} />
-        <Stat label="images" value={totalImages} />
-        <Stat label="indexed" value={totalIndexed} />
+        <Stat singular="roll" plural="rolls" value={rolls.length} />
+        <Stat singular="image" plural="images" value={totalImages} />
+        <Stat singular="indexed" plural="indexed" value={totalIndexed} />
       </div>
 
       {rolls.length === 0 ? (
@@ -41,10 +41,10 @@ export default async function RollsPage() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ singular, plural, value }: { singular: string; plural: string; value: number }) {
   return (
-    <span className="text-base font-mono">
-      {value.toLocaleString()} {label}
+    <span className="text-sm tracking-tight tabular-nums text-primary-400">
+      {value.toLocaleString()} {value === 1 ? singular : plural}
     </span>
   )
 }

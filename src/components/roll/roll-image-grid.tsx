@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { getImageUrl } from "@/lib/imagekit/url";
+import { getImageUrl, getLqipUrl } from "@/lib/imagekit/url";
 import { deleteImages } from "@/actions/images";
 import type { Image as ImageRecord } from "@/types/domain";
+import { Masonry, type MasonryRenderProps } from "@/components/ui/masonry";
+import { useState } from "react";
 
 type Props = {
   rollId: string;
@@ -16,6 +18,77 @@ type Props = {
   onImagesChange?: (images: ImageRecord[]) => void;
   onFullscreen?: (imageId: string, contextImages: ImageRecord[]) => void;
 };
+
+type CellData = {
+  image: ImageRecord;
+  isSelected: boolean;
+  onImageClick?: (id: string) => void;
+  onFullscreen?: () => void;
+  onDelete?: (id: string) => void;
+};
+
+function ImageCell({ data, width }: MasonryRenderProps<CellData>) {
+  const { image, isSelected, onImageClick, onFullscreen, onDelete } = data;
+  const src = getImageUrl(image.storage_key, { width: 400, quality: 80 });
+  const lqip = getLqipUrl(image.storage_key);
+
+  const w = image.width ?? 400;
+  const h = image.height ?? 300;
+  const cellHeight = Math.round((width / w) * h);
+
+  const ringClass = isSelected ? "ring-2 ring-semantic-info ring-offset-2" : "";
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      onClick={() => onImageClick?.(image.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onImageClick?.(image.id);
+        }
+      }}
+      className={`group relative rounded-none focus:outline-none focus:ring-2 focus:ring-primary-900 cursor-pointer ${ringClass}`}
+    >
+      <Image
+        src={src}
+        alt={image.original_filename ?? ""}
+        width={w}
+        height={h}
+        sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+        className="w-full h-auto rounded-none"
+        placeholder="blur"
+        blurDataURL={lqip}
+        style={{ height: cellHeight }}
+      />
+
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 animate-bloom flex gap-1">
+        {onFullscreen && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onFullscreen(); }}
+            className="flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-black/60 animate-swiss"
+            aria-label="Open fullscreen"
+            tabIndex={-1}
+          >
+            <span className="text-white text-base leading-none">⤢</span>
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(image.id); }}
+            className="flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-semantic-alert/80 animate-swiss"
+            aria-label="Delete image"
+            tabIndex={-1}
+          >
+            <span className="text-white text-base leading-none">×</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function RollImageGrid({
   rollId,
@@ -95,7 +168,7 @@ export function RollImageGrid({
   if (images.length === 0) {
     return (
       <div className="flex items-center justify-center flex-1 py-20">
-        <p className="text-lg font-mono">
+        <p className="text-2xl font-medium text-primary-200">
           No images yet. Drag files here to index.
         </p>
       </div>
@@ -113,113 +186,43 @@ export function RollImageGrid({
     // Optimistic: remove from local state immediately
     setImages((prev) => prev.filter((img) => img.id !== id));
     deleteImages([id]).catch(() => {
-      // Restore on failure by re-fetching isn't straightforward — just log for now
       console.error("Failed to delete image", id);
     });
   }
 
-  return (
-    <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4 p-4">
-      {images.map((image) => {
-        const isResult = resultSet === null || resultSet.has(image.id);
-        const isSelected = selectedSet.has(image.id);
+  // T-04: reflow on filter rather than dim non-matching cells.
+  // Dense reflow (default): non-matching cells are dropped from the grid so
+  // masonic repacks remaining cells into the available columns. Selected cells
+  // are kept visible across filter changes so the user's working set is never
+  // hidden by a query.
+  const visibleImages =
+    resultSet !== null
+      ? images.filter((img) => resultSet.has(img.id) || selectedSet.has(img.id))
+      : images;
 
-        const opacity =
-          resultSet !== null && !isResult && !isSelected ? 0.15 : 1;
-
-        return (
-          <ImageCell
-            key={image.id}
-            image={image}
-            opacity={opacity}
-            isSelected={isSelected}
-            onClick={onImageClick}
-            onDelete={handleDelete}
-            onFullscreen={
-              onFullscreen
-                ? () => onFullscreen(image.id, contextImages)
-                : undefined
-            }
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-type ImageCellProps = {
-  image: ImageRecord;
-  opacity: number;
-  isSelected: boolean;
-  onClick?: (id: string) => void;
-  onFullscreen?: () => void;
-  onDelete?: (id: string) => void;
-};
-
-function ImageCell({
-  image,
-  opacity,
-  isSelected,
-  onClick,
-  onFullscreen,
-  onDelete,
-}: ImageCellProps) {
-  const src = getImageUrl(image.storage_key, { width: 400, quality: 80 });
-
-  const handleActivate = () => onClick?.(image.id);
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onClick?.(image.id);
-    }
-  };
-
-  const ringClass = isSelected ? "ring-2 ring-semantic-info ring-offset-2" : "";
+  const cellItems: CellData[] = visibleImages.map((image) => ({
+    image,
+    isSelected: selectedSet.has(image.id),
+    onImageClick,
+    onFullscreen: onFullscreen
+      ? () => onFullscreen(image.id, contextImages)
+      : undefined,
+    onDelete: handleDelete,
+  }));
 
   return (
-    // stable DOM node — transition-opacity only, never unmounts
-    <div
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      onClick={handleActivate}
-      onKeyDown={handleKeyDown}
-      className={`group relative break-inside-avoid mb-1 rounded-none transition-opacity duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary-900 cursor-pointer ${ringClass}`}
-      style={{ opacity }}
-    >
-      <Image
-        src={src}
-        alt={image.original_filename ?? ""}
-        width={400}
-        height={0}
-        sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-        className="w-full h-auto rounded-none"
-        unoptimized
-        style={{ height: "auto" }}
-      />
-
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 animate-bloom flex gap-1">
-        {onFullscreen && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onFullscreen(); }}
-            className="flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-black/60 animate-swiss"
-            aria-label="Open fullscreen"
-            tabIndex={-1}
-          >
-            <span className="text-white text-base leading-none">⤢</span>
-          </button>
-        )}
-        {onDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(image.id); }}
-            className="flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-semantic-alert/80 animate-swiss"
-            aria-label="Delete image"
-            tabIndex={-1}
-          >
-            <span className="text-white text-base leading-none">×</span>
-          </button>
-        )}
-      </div>
-    </div>
+    <Masonry
+      items={cellItems}
+      getKey={(item) => item?.image?.id ?? ""}
+      getAspectRatio={(item) => {
+        const w = item?.image?.width ?? 1;
+        const h = item?.image?.height ?? 1;
+        return w / h;
+      }}
+      renderItem={ImageCell}
+      columnWidth={240}
+      gap={4}
+      className="p-4"
+    />
   );
 }

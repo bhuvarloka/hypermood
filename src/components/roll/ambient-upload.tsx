@@ -108,7 +108,7 @@ export function AmbientUpload({ rollId, children }: Props) {
       {/* Inline progress readout — unobtrusive, mono, updates in place */}
       {isUploading && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-          <p className="text-base font-mono">
+          <p className="text-sm tabular-nums text-primary-400">
             Uploading &amp; Indexing {state.done} of {state.total}...
           </p>
         </div>

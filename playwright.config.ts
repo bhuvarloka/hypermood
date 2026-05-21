@@ -1,14 +1,26 @@
 import { defineConfig, devices } from '@playwright/test'
+import { readFileSync, existsSync } from 'fs'
+import { join } from 'path'
 
-/**
- * E2E tests run against a live Next.js dev server.
- *
- * Prerequisites:
- *   - .env.test.local with TEST_USER_EMAIL and TEST_USER_PASSWORD
- *   - A seeded Supabase test project with at least one roll
- *
- * Run: pnpm test:e2e
- */
+const envPath = join(__dirname, '.env.test.local')
+if (existsSync(envPath)) {
+  for (const rawLine of readFileSync(envPath, 'utf8').split('\n')) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+    const eq = line.indexOf('=')
+    if (eq === -1) continue
+    const key = line.slice(0, eq).trim()
+    let value = line.slice(eq + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    if (!(key in process.env)) process.env[key] = value
+  }
+}
+
 export default defineConfig({
   testDir: 'tests/e2e',
   testMatch: '**/*.e2e.ts',

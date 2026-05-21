@@ -8,6 +8,7 @@ import {
   rerunWithModifiedFilters,
 } from "@/actions/chat";
 import { FilterChips } from "@/components/chat/filter-chips";
+import { formatChipLabel } from "@/components/chat/filter-chips.logic";
 import type { FilterMod } from "@/actions/chat";
 import type { QueryPlan } from "@/lib/gemini/query";
 import { RollImageGrid } from "@/components/roll/roll-image-grid";
@@ -305,12 +306,20 @@ export function ChatInterface({
           // Empty state — whole canvas is the drop target (handled by AmbientUpload above)
           <div className="flex flex-col items-center justify-center h-full gap-3 select-none pointer-events-none">
             <p className="text-4xl font-medium text-primary-200">{rollName}</p>
-            <p className="text-base font-mono text-primary-200">
+            <p className="text-sm text-primary-400">
               Drop images anywhere to start
             </p>
           </div>
         ) : (
           <>
+            {resultImageIds !== null && (
+              <ActiveFilterLine
+                plan={activePlan}
+                matched={resultImageIds.length}
+                total={liveImageCount}
+                onClear={showAll}
+              />
+            )}
             <RollImageGrid
               rollId={rollId}
               initialImages={initialImages}
@@ -415,32 +424,32 @@ export function ChatInterface({
             {/* Status */}
             <div className="flex-1 flex items-center gap-2">
               {processing ? (
-                <span className="text-sm font-mono text-primary-300 animate-pulse">
+                <span className="text-sm tabular-nums text-primary-400 animate-pulse">
                   Searching…
                 </span>
               ) : resultImageIds !== null ? (
                 <>
-                  <span className="text-sm font-mono text-primary-400">
+                  <span className="text-sm tabular-nums text-primary-400">
                     {resultImageIds.length} of {liveImageCount}
                   </span>
                   <button
                     onClick={showAll}
-                    className="text-sm font-mono text-primary-400 animate-swiss hover:text-primary-900 underline"
+                    className="text-sm tabular-nums text-primary-400 animate-swiss hover:text-primary-900 underline"
                   >
                     show all
                   </button>
                   {canPreview && (
                     <button
                       onClick={() => setPreviewOpen(true)}
-                      className="text-sm font-mono text-primary-400 animate-swiss hover:text-primary-900 underline"
+                      className="text-sm tabular-nums text-primary-400 animate-swiss hover:text-primary-900 underline"
                     >
                       preview
                     </button>
                   )}
                 </>
               ) : (
-                <span className="text-sm font-mono text-primary-300">
-                  {liveImageCount > 0 ? `${liveImageCount} images` : ""}
+                <span className="text-sm tabular-nums text-primary-400">
+                  {liveImageCount > 0 ? `${liveImageCount} ${liveImageCount === 1 ? 'image' : 'images'}` : ""}
                 </span>
               )}
             </div>
@@ -449,7 +458,7 @@ export function ChatInterface({
             {hasConversation && (
               <button
                 onClick={() => setHistoryOpen((v) => !v)}
-                className="text-sm font-mono text-primary-300 animate-swiss hover:text-primary-900"
+                className="text-sm text-primary-400 animate-swiss hover:text-primary-900"
               >
                 {historyOpen ? "close" : "history"}
               </button>
@@ -489,10 +498,10 @@ export function ChatInterface({
           style={{ maxHeight: "60vh" }}
         >
           <div className="flex items-center justify-between px-6 py-3 border-b border-primary-100 shrink-0">
-            <span className="text-base font-mono">history</span>
+            <span className="text-sm text-primary-400">history</span>
             <button
               onClick={() => setHistoryOpen(false)}
-              className="text-base font-mono text-primary-200 animate-swiss hover:text-primary-900"
+              className="text-sm text-primary-400 animate-swiss hover:text-primary-900"
             >
               ×
             </button>
@@ -556,6 +565,38 @@ function HistoryBubble({ message }: { message: MessageWithFollowups }) {
   );
 }
 
+function ActiveFilterLine({
+  plan,
+  matched,
+  total,
+  onClear,
+}: {
+  plan: QueryPlan | null;
+  matched: number;
+  total: number;
+  onClear: () => void;
+}) {
+  const summary =
+    plan && plan.filters.length > 0
+      ? plan.filters.map(formatChipLabel).join(" · ")
+      : "filtered";
+
+  return (
+    <div className="flex items-center gap-2 px-4 pt-4 text-sm text-primary-400 tabular-nums">
+      <span>
+        {summary} · {matched} of {total}
+      </span>
+      <button
+        onClick={onClear}
+        className="animate-swiss hover:text-primary-900 leading-none"
+        aria-label="Clear filter"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 function SelectionStrip({
   selectedIds,
   imageMap,
@@ -578,7 +619,6 @@ function SelectionStrip({
               alt={img.original_filename ?? ""}
               width={24}
               height={24}
-              unoptimized
               className="w-6 h-6 rounded-sm object-cover"
             />
             <button
@@ -591,7 +631,7 @@ function SelectionStrip({
           </div>
         );
       })}
-      <span className="text-sm font-mono text-primary-400 shrink-0">
+      <span className="text-sm tabular-nums text-primary-400 shrink-0">
         {selectedIds.length} selected
       </span>
     </div>

@@ -71,7 +71,7 @@ function OtpBoxes({ onComplete, loading, error }: {
           disabled={loading}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
-          className={`w-12 h-14 text-center text-xl font-mono bg-primary-900 border text-white rounded-none focus:outline-none animate-swiss disabled:opacity-40 ${
+          className={`w-12 h-14 text-center text-xl tabular-nums bg-primary-900 border text-white rounded-none focus:outline-none animate-swiss disabled:opacity-40 ${
             error ? 'border-semantic-alert' : 'border-primary-800 focus:border-white'
           }`}
         />
@@ -133,7 +133,7 @@ function LoginForm() {
       {step === 'email' ? (
         <form onSubmit={handleEmailSubmit} className="flex flex-col gap-3 w-full max-w-xs">
           {error && (
-            <p className="text-base font-mono text-semantic-alert">{error}</p>
+            <p className="text-sm text-semantic-alert">{error}</p>
           )}
           <input
             type="email"
@@ -154,20 +154,20 @@ function LoginForm() {
         </form>
       ) : (
         <div className="flex flex-col gap-4 items-start">
-          <p className="text-base font-mono text-primary-200">
+          <p className="text-sm text-primary-200">
             Code sent to {email}
           </p>
           <OtpBoxes onComplete={handleCodeComplete} loading={loading} error={error} />
           {error && (
-            <p className="text-base font-mono text-semantic-alert">{error}</p>
+            <p className="text-sm text-semantic-alert">{error}</p>
           )}
           {loading && (
-            <p className="text-base font-mono text-primary-200">Verifying…</p>
+            <p className="text-sm text-primary-200">Verifying…</p>
           )}
           <button
             type="button"
             onClick={() => { setStep('email'); setError(null) }}
-            className="text-sm font-mono text-primary-800 animate-swiss hover:text-white mt-2"
+            className="text-sm text-primary-400 animate-swiss hover:text-white mt-2"
           >
             Use a different email
           </button>

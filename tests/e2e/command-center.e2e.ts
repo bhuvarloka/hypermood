@@ -80,27 +80,35 @@ test.describe('Command Center — chat and dimming', () => {
       .toBeVisible({ timeout: 15000 })
   })
 
-  test('result images dim non-matching images to low opacity', async ({ page }) => {
+  test('result reflows the grid — non-matching images are removed, not dimmed', async ({ page }) => {
+    const gridImages = page.locator('[class*="columns"] img, .masonic img').first()
+    await gridImages.waitFor({ timeout: 5000 })
+    const totalBefore = await page.locator('[role="button"][aria-pressed]').count()
+
     const textarea = page.getByPlaceholder('Ask about this roll…')
     await textarea.fill('show me portraits')
     await textarea.press('Enter')
-    // Wait for result
-    await page.waitForSelector('button:has-text("Show all")', { timeout: 15000 })
+    // Wait for the active-filter line to appear above the grid
+    await page.getByRole('button', { name: 'Clear filter' }).waitFor({ timeout: 15000 })
 
-    // At least one image cell should have reduced opacity
+    // No cells should be dimmed — dimming is replaced by reflow
     const dimmedCells = page.locator('[style*="opacity: 0.15"], [style*="opacity:0.15"]')
-    await expect(dimmedCells.first()).toBeVisible({ timeout: 3000 })
+    expect(await dimmedCells.count()).toBe(0)
+
+    // The grid contains at most `totalBefore` cells — non-matches were filtered out
+    const totalAfter = await page.locator('[role="button"][aria-pressed]').count()
+    expect(totalAfter).toBeLessThanOrEqual(totalBefore)
   })
 
-  test('"Show all" button resets the dimming', async ({ page }) => {
+  test('clearing the active filter restores every image to the grid', async ({ page }) => {
     const textarea = page.getByPlaceholder('Ask about this roll…')
     await textarea.fill('show me portraits')
     await textarea.press('Enter')
-    await page.waitForSelector('button:has-text("Show all")', { timeout: 15000 })
-    await page.getByRole('button', { name: 'Show all' }).click()
-    // "Show all" button should disappear
-    await expect(page.getByRole('button', { name: 'Show all' })).not.toBeVisible()
-    // No dimmed images
+    await page.getByRole('button', { name: 'Clear filter' }).waitFor({ timeout: 15000 })
+    await page.getByRole('button', { name: 'Clear filter' }).click()
+    // Active-filter line should disappear
+    await expect(page.getByRole('button', { name: 'Clear filter' })).not.toBeVisible()
+    // No dimmed cells either
     const dimmedCells = page.locator('[style*="opacity: 0.15"]')
     expect(await dimmedCells.count()).toBe(0)
   })
