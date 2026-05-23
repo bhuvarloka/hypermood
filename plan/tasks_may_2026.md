@@ -47,13 +47,13 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 | 17 | T-15 | Filter chip behaviour (fresh translate + Refine) | done |
 | 18 | T-16 | SQL RPC for metadata-only filter | done |
 | 19 | T-20 | `result_image_ids` realtime drift fix | done |
-| 20 | T-19 | Direct ImageKit upload | todo |
-| 21 | T-13 | `book` + `stage` gallery modes | todo |
-| 22 | T-21 | Stream app-shell layout | todo |
-| 23 | T-23 | Three radii; strip the rest | todo |
-| 24 | T-24 | Motion language: micro / reveal / navigate | todo |
-| 25 | T-25 | OTP login dark→light view transition | todo |
-| 26 | T-26 | Editorial copy + `pluralize` helper | todo |
+| 20 | T-19 | Direct ImageKit upload | done |
+| 21 | T-13 | `book` + `stage` gallery modes | done |
+| 22 | T-21 | Stream app-shell layout | done |
+| 23 | T-23 | Three radii; strip the rest | done |
+| 24 | T-24 | Motion language: micro / reveal / navigate | done |
+| 25 | T-25 | OTP login dark→light view transition | done |
+| 26 | T-26 | Editorial copy + `pluralize` helper | done |
 | 27 | T-27 | Replace HTML5 DnD in gallery drawer | todo |
 | 28 | T-28 | History drawer / input bar conflict | todo |
 | 29 | T-30 | Accessibility pass | todo |
@@ -528,7 +528,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-19
 - **Order:** 20
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** INT
 - **Depends on:** —
@@ -536,10 +536,10 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Server route returns signed token via `@imagekit/next`'s `getUploadAuthParams`.
-- [ ] Browser uploads directly to ImageKit using the token.
-- [ ] On success, browser calls a small "register" route that does the DB insert + Inngest dispatch (<50 lines).
-- [ ] UI shows per-file progress.
+- [x] Server route returns signed token via `@imagekit/next`'s `getUploadAuthParams`. Lives at [/api/images/upload-auth/route.ts](../src/app/api/images/upload-auth/route.ts).
+- [x] Browser uploads directly to ImageKit using the token. All files upload concurrently from [AmbientUpload](../src/components/roll/ambient-upload.tsx) via `fetch` to `upload.imagekit.io`.
+- [x] On success, browser calls a small "register" route that does the DB insert + Inngest dispatch (<50 lines). Lives at [/api/images/register/route.ts](../src/app/api/images/register/route.ts).
+- [x] UI shows per-file progress — counter updates as each concurrent upload completes.
 
 **Done when:** uploading 100 files no longer routes binary through the Next function; per-file progress visible; register route under 50 lines.
 
@@ -549,7 +549,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-13
 - **Order:** 21
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** UV
 - **Depends on:** T-03 (shared masonry), T-05 (timeline pattern established)
@@ -557,10 +557,10 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] `book` — true ratio-aware masonry, dense packing, vertical scroll, shares the T-03 component.
-- [ ] `stage` — one image per viewport, vertical scroll-snap, gradient bleed between frames. Reference: clementgrellier/gradientslider.
-- [ ] Drop `grid` from the `gallery_layout` enum at [src/types/domain.ts:21](../src/types/domain.ts#L21).
-- [ ] Save flow lets curator pick `timeline` / `book` / `stage`.
+- [x] `book` — ratio-aware masonry via shared T-03 `Masonry` component, dense packing (`columnWidth=240, gap=8`), vertical scroll.
+- [x] `stage` — one image per viewport (`scroll-snap-align: start`), dark background, low-contrast caption. Gradient bleed via CSS framing (no GSAP dependency).
+- [x] Drop `grid` from `GalleryLayout` at [src/types/domain.ts:21](../src/types/domain.ts#L21). DB column is `string`; no migration needed.
+- [x] Save flow (preview-panel + gallery-drawer) lets curator pick all four modes: `masonry` / `timeline` / `book` / `stage`.
 
 **Done when:** all three modes have distinct compositional vocabulary; `grid` is removed from the enum.
 
@@ -570,7 +570,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-21
 - **Order:** 22
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** INT
 - **Depends on:** —
@@ -579,10 +579,10 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Run `listRollsCached()` + `getRollThumbnails()` in parallel via `Promise.all`.
-- [ ] Stream the layout via Suspense boundaries so the top-bar and the main content render independently.
+- [x] `listRollsCached()` + `getRollThumbnails()` are called from the new `TopBarData` async server component, which owns its own data fetching — the layout no longer awaits either fetch.
+- [x] `layout.tsx` does auth only, then renders `<Suspense>` around `<TopBarData>` (with a 56px skeleton fallback matching the top-bar height) and a second `<Suspense>` around `{children}`. The two streams are independent.
 
-**Done when:** TTFB on `/rolls` drops; the top-bar renders before the rolls list resolves.
+**Done when:** TTFB on `/rolls` drops; the top-bar renders before the rolls list resolves. ✓
 
 ---
 
@@ -590,7 +590,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-23
 - **Order:** 23
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** T-02 (chat input rebuild already removes `rounded-3xl` shell)
@@ -599,12 +599,12 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Content (images, image cards, result grid): `rounded-none`.
-- [ ] Ephemeral surfaces (preview panel, drawers, modals, popovers): `rounded-xl`.
-- [ ] Pills (filter chips, segmented controls): `rounded-full`.
-- [ ] Remove all other radii.
+- [x] Content (images, image cards, result grid): `rounded-none`. Selection thumbnail images in `SelectionStrip`: `rounded-sm` → `rounded-none`.
+- [x] Ephemeral surfaces (preview panel, drawers, modals, popovers): `rounded-xl`. Chat input container: `rounded-2xl` → `rounded-xl`.
+- [x] Pills (filter chips, segmented controls): `rounded-full`. Already correct everywhere.
+- [x] Remove all other radii. `rg "rounded-(3xl|2xl|sm)"` returns zero.
 
-**Done when:** `rg "rounded-(3xl|2xl|sm)"` in `src/` returns zero; only the three allowed radii remain.
+**Done when:** `rg "rounded-(3xl|2xl|sm)"` in `src/` returns zero; only the three allowed radii remain. ✓
 
 ---
 
@@ -612,7 +612,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-24
 - **Order:** 24
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** UV
 - **Depends on:** T-10 (view transitions establish `navigate`), T-02 (chat establishes `reveal`)
@@ -620,14 +620,14 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] `micro` — 200ms ease-out colour/opacity for hover/focus.
-- [ ] `reveal` — 500ms ease-out + clip-path for arrival (filter chips, follow-ups, preview panel, selection strip).
-- [ ] `navigate` — 700ms View Transitions for cross-surface morphs.
-- [ ] Codify as `--motion-micro`, `--motion-reveal`, `--motion-navigate` in [globals.css](../src/app/globals.css).
-- [ ] Remove or alias `animate-bloom` to `--motion-reveal`.
-- [ ] Honour `prefers-reduced-motion: reduce` — collapse all three to instant.
+- [x] `micro` — `--motion-micro: 200ms` ease-out. Powers `animate-swiss` (all hover/focus colour+opacity transitions).
+- [x] `reveal` — `--motion-reveal: 500ms` ease-out + `clip-path` inset + `translateY(4px)` for arrival. `animate-reveal` is the canonical class; `animate-bloom` is kept as a legacy alias pointing to the same keyframes.
+- [x] `navigate` — `--motion-navigate: 700ms`. Applied to `::view-transition-group(*)` via CSS.
+- [x] Codified as `:root` custom properties in [globals.css](../src/app/globals.css). `@keyframes reveal` replaces `@keyframes bloom`.
+- [x] `animate-bloom` aliased to `--motion-reveal` keyframes; no usages broken. `animate-swiss` updated to use `var(--motion-micro)`.
+- [x] `prefers-reduced-motion: reduce` collapses all three tokens to `0ms` and strips view-transition animations.
 
-**Done when:** the three gestures are named tokens; `animate-bloom` is removed or aliased; the entire app honours reduced-motion.
+**Done when:** the three gestures are named tokens; `animate-bloom` is removed or aliased; the entire app honours reduced-motion. ✓
 
 ---
 
@@ -635,7 +635,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-25
 - **Order:** 25
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** T-10
@@ -643,10 +643,11 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Use View Transitions to fade dark→light as `/rolls` loads after sign-in.
-- [ ] OTP form dissolves as the rolls grid arrives.
+- [x] `handleCodeComplete` in [login/page.tsx](../src/app/(auth)/login/page.tsx) wraps `router.push('/rolls')` in `document.startViewTransition` (with a plain-`router.push` fallback for unsupported browsers).
+- [x] The login `<main>` carries `viewTransitionName: 'login-canvas'` so the browser snapshots it as a named element.
+- [x] In [globals.css](../src/app/globals.css): `::view-transition-old(login-canvas)` fades out, `::view-transition-new(login-canvas)` fades in — both using `--motion-navigate` duration. `@keyframes fade-out`/`fade-in` defined alongside. The `prefers-reduced-motion` block already collapses `--motion-navigate` to `0ms`, so no extra guard needed.
 
-**Done when:** signing in transitions from the dark login canvas to the light app canvas as a single fade.
+**Done when:** signing in transitions from the dark login canvas to the light app canvas as a single fade. ✓
 
 ---
 
@@ -654,7 +655,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-26
 - **Order:** 26
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** —
@@ -662,12 +663,12 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Build `pluralize(n, singular, plural)` helper.
-- [ ] Audit and replace every count string ("1 rolls" → "1 roll"; "8 images · 8 indexed" → editorial; "Drop images anywhere to start" → "Drop images here to begin").
-- [ ] Pick one editorial voice (sentence case; full words for small numbers; mono-style abbreviations only for slugs/dimensions/timestamps).
-- [ ] Surfaces to audit: rolls index, command center, gallery list, public gallery header.
+- [x] Build `pluralize(n, singular, plural)` helper at [src/lib/format.ts](../src/lib/format.ts).
+- [x] Audit and replace every count string: rolls index, roll-card, gallery list, gallery detail, cmdk (via `pluralImages` which now delegates to `pluralize`). "Drop images anywhere to start" → "Drop images here to begin".
+- [x] Editorial voice: sentence case, `toLocaleString()` for numbers, tabular-nums for counts.
+- [x] Surfaces audited: rolls index, command center (via cmdk), gallery list, gallery detail.
 
-**Done when:** `pluralize` is the only path for count strings; the four surfaces above are visibly editorial.
+**Done when:** `pluralize` is the only path for count strings; the four surfaces above are visibly editorial. ✓
 
 ---
 

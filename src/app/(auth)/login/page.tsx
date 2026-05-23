@@ -122,7 +122,12 @@ function LoginForm() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/rolls')
+      const navigate = () => router.push('/rolls')
+      if ('startViewTransition' in document) {
+        document.startViewTransition(navigate)
+      } else {
+        navigate()
+      }
     }
   }
 
@@ -179,7 +184,10 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="h-screen bg-primary-950 flex flex-col items-center justify-center px-6">
+    <main
+      className="h-screen bg-primary-950 flex flex-col items-center justify-center px-6"
+      style={{ viewTransitionName: 'login-canvas' }}
+    >
       <Suspense>
         <LoginForm />
       </Suspense>

@@ -78,12 +78,12 @@ export function useChatState({ rollId, initialImages }: Props) {
 
       // In refine mode, pass the current active filters so the server can merge them
       // and the LLM can write an accurate clarification_note.
-      const activeFilters = refineMode && !refIds && activePlan
-        ? activePlan.filters
-        : undefined;
+      const isRefining = refineMode && !refIds
+      if (!isRefining) setRefineMode(false)
+      const activeFilters = isRefining && activePlan ? activePlan.filters : undefined;
 
       try {
-        const result = await sendMessage(rollId, text, refIds, activeFilters, refineMode && !refIds);
+        const result = await sendMessage(rollId, text, refIds, activeFilters, isRefining);
         setResultImageIds(result.images.map((img) => img.id));
         if (result.interpretedFilter) setActivePlan(result.interpretedFilter);
         if (result.followups?.length) setFollowups(result.followups);

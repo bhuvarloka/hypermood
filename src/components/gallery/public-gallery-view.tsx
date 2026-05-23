@@ -193,49 +193,34 @@ function GalleryMasonryCell({ data, width }: MasonryRenderProps<GalleryImageReco
   return <GalleryImage image={image} index={index} width={width} />
 }
 
-function MasonryGrid({ images }: { images: GalleryImageRecord[] }) {
+function GalleryMasonryGrid({ images, columnWidth, gap, className }: {
+  images: GalleryImageRecord[]
+  columnWidth: number
+  gap: number
+  className: string
+}) {
   const items = images.map((img, i) => ({ ...img, index: i }))
   return (
     <Masonry
       items={items}
       getKey={(item) => item.id}
-      getAspectRatio={(item) => {
-        const w = item.width ?? 1
-        const h = item.height ?? 1
-        return w / h
-      }}
+      getAspectRatio={(item) => (item.width ?? 1) / (item.height ?? 1)}
       renderItem={GalleryMasonryCell}
-      columnWidth={320}
-      gap={64}
-      className="p-8 md:p-16"
+      columnWidth={columnWidth}
+      gap={gap}
+      className={className}
     />
   )
+}
+
+function MasonryGrid({ images }: { images: GalleryImageRecord[] }) {
+  return <GalleryMasonryGrid images={images} columnWidth={320} gap={64} className="p-8 md:p-16" />
 }
 
 // ---- Book grid — dense ratio-aware masonry, tighter packing ---- //
 
-function BookMasonryCell({ data, width }: MasonryRenderProps<GalleryImageRecord & { index: number }>) {
-  const { index, ...image } = data
-  return <GalleryImage image={image} index={index} width={width} />
-}
-
 function BookGrid({ images }: { images: GalleryImageRecord[] }) {
-  const items = images.map((img, i) => ({ ...img, index: i }))
-  return (
-    <Masonry
-      items={items}
-      getKey={(item) => item.id}
-      getAspectRatio={(item) => {
-        const w = item.width ?? 1
-        const h = item.height ?? 1
-        return w / h
-      }}
-      renderItem={BookMasonryCell}
-      columnWidth={240}
-      gap={8}
-      className="p-2"
-    />
-  )
+  return <GalleryMasonryGrid images={images} columnWidth={240} gap={8} className="p-2" />
 }
 
 // ---- Stage view — one image per viewport, vertical scroll-snap ---- //

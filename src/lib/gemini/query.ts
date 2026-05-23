@@ -23,8 +23,9 @@ async function initSystemPromptCache(): Promise<void> {
       },
     })
     cachedSystemPromptName = cache.name ?? null
-  } catch {
-    // Context caching may not be available for this model/region — degrade silently.
+  } catch (err) {
+    // Context caching may not be available for this model/region — degrade to inline system prompt.
+    console.warn('[query] System-prompt cache init failed:', err)
     cachedSystemPromptName = null
   }
 }

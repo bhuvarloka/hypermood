@@ -10,6 +10,7 @@ import {
   reorderGalleryImages,
 } from '@/actions/galleries'
 import { getImageUrl } from '@/lib/imagekit/url'
+import { pluralize } from '@/lib/format'
 import { CopyLinkButton } from '@/components/ui/copy-link-button'
 import type { Gallery, GalleryLayout, GalleryListItem, Image as ImageRecord } from '@/types/domain'
 
@@ -212,7 +213,7 @@ function GalleryRow({
         <div className="flex-1 min-w-0">
           <p className="text-lg truncate">{gallery.name}</p>
           <p className="text-sm tabular-nums text-primary-400">
-            {gallery.image_count} {gallery.image_count === 1 ? 'image' : 'images'}
+            {pluralize(gallery.image_count, 'image')}
           </p>
         </div>
       </button>
@@ -339,7 +340,7 @@ function GalleryDetail({
           </button>
         )}
         <p className="text-sm tabular-nums text-primary-400 mt-1">
-          {images.length} {images.length === 1 ? 'image' : 'images'}
+          {pluralize(images.length, 'image')}
         </p>
       </div>
 

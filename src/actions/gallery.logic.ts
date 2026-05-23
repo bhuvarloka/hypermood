@@ -28,9 +28,8 @@ export function staggerDelay(index: number): number {
   return Math.min(index * 30, 600)
 }
 
-/**
- * Pluralises "image" / "images" for a given count.
- */
+import { pluralize } from '@/lib/format'
+
 export function pluralImages(count: number): string {
-  return `${count} ${count === 1 ? 'image' : 'images'}`
+  return pluralize(count, 'image')
 }

@@ -66,18 +66,15 @@ export async function executeQuery(plan: QueryPlan, rollId: string, precomputedE
     return { images: sorted, total: sorted.length }
   }
 
-  // Metadata-only path: delegate filtering to the filter_images_by_metadata RPC so
-  // the WHERE clause runs server-side instead of over-fetching and filtering in JS.
-  const metadataClauses = filters.map(buildClause).filter((c): c is string => c !== null)
-
-  if (metadataClauses.length > 0) {
+  // Metadata-only path: SQL-side filter avoids the JS over-fetch pattern.
+  if (clauses.length > 0) {
     const sortField = sort && IMAGES_TABLE_COLUMNS.has(sort.field) ? sort.field : 'uploaded_at'
     const sortAsc = sort ? sort.direction === 'asc' : false
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rpcResult = await (supabase as any).rpc('filter_images_by_metadata', {
       p_roll_id: rollId,
-      p_where_clause: metadataClauses.join(' AND '),
+      p_where_clause: clauses.join(' AND '),
       p_sort_field: sortField,
       p_sort_asc: sortAsc,
       p_limit: limit,

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { getImageUrl } from '@/lib/imagekit/url'
+import { pluralize } from '@/lib/format'
 import type { RollWithImageCount } from '@/types/domain'
 
 type Props = {
@@ -84,7 +85,7 @@ export function RollCard({ roll, storageKeys }: Props) {
         <p className="text-2xl font-bold leading-tight truncate">{roll.name}</p>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-sm tabular-nums text-primary-400">
-            {roll.image_count.toLocaleString()} {roll.image_count === 1 ? 'image' : 'images'}
+            {pluralize(roll.image_count, 'image')}
           </span>
           {isPending && (
             <span className="text-sm text-primary-400">· pending</span>

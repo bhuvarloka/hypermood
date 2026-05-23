@@ -64,34 +64,79 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Motion tokens ──────────────────────────────────────────── */
+
+/* Three named durations that define every motion in the app. */
+:root {
+  --motion-micro: 200ms;      /* hover/focus colour & opacity */
+  --motion-reveal: 500ms;     /* arrival: chips, panels, strips */
+  --motion-navigate: 700ms;   /* cross-surface view transitions */
+}
+
 /* ── Animations ────────────────────────────────────────────── */
 
-/* .animate-bloom — for generative UI appearing in the chat, hover reveals */
-@keyframes bloom {
+/* reveal — element arriving into view (formerly bloom) */
+@keyframes reveal {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    clip-path: inset(4px 4px 4px 4px round 4px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    clip-path: inset(0% 0% 0% 0% round 0px);
+    transform: translateY(0);
   }
 }
 
-.animate-bloom {
-  animation: bloom 150ms ease-out both;
+/* animate-reveal: canonical name */
+.animate-reveal {
+  animation: reveal var(--motion-reveal) ease-out both;
 }
 
-/* .animate-swiss — standard hover micro-interactions */
+/* animate-bloom: legacy alias — kept so existing usages don't break */
+.animate-bloom {
+  animation: reveal var(--motion-reveal) ease-out both;
+}
+
+/* animate-swiss: micro-interaction transitions */
 .animate-swiss {
-  transition: all 200ms ease-out;
+  transition: all var(--motion-micro) ease-out;
 }
 
 /* ── View Transitions ───────────────────────────────────────── */
 
-/* Honour prefers-reduced-motion: skip all view transition animations,
-   but keep the navigation itself so the UI still updates. */
+/* Apply --motion-navigate duration to all view transition groups. */
+::view-transition-group(*) {
+  animation-duration: var(--motion-navigate);
+}
+
+/* Login dark→light fade: old dark canvas fades out, new white app fades in. */
+::view-transition-old(login-canvas) {
+  animation: fade-out var(--motion-navigate) ease-out both;
+}
+::view-transition-new(login-canvas) {
+  animation: fade-in var(--motion-navigate) ease-out both;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Honour prefers-reduced-motion: collapse all three token durations to zero
+   and skip view transition animations — navigation still works. */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-micro: 0ms;
+    --motion-reveal: 0ms;
+    --motion-navigate: 0ms;
+  }
+
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) {

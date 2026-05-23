@@ -19,6 +19,16 @@ type AuthParams = {
   publicKey: string
 }
 
+type RegisterFile = {
+  storagePath: string
+  originalFilename: string
+  fileSizeBytes: number
+  mimeType: string
+  width: number | null
+  height: number | null
+  capturedAt: string | null
+}
+
 type ImageKitUploadResponse = {
   filePath: string
   width?: number
@@ -113,15 +123,7 @@ export function AmbientUpload({ rollId, children }: Props) {
         const auth = await fetchAuthParams()
 
         let done = 0
-        const registered: {
-          storagePath: string
-          originalFilename: string
-          fileSizeBytes: number
-          mimeType: string
-          width: number | null
-          height: number | null
-          capturedAt: string | null
-        }[] = []
+        const registered: RegisterFile[] = []
 
         // Upload files concurrently; update progress as each one completes
         await Promise.all(

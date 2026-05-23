@@ -2,6 +2,7 @@ import { listRollsCached } from '@/lib/rolls/list'
 import { getRollThumbnails } from '@/lib/rolls/thumbnails'
 import { RollCard } from '@/components/roll/roll-card'
 import { NewRollButton } from '@/components/roll/new-roll-button'
+import { pluralize } from '@/lib/format'
 
 export default async function RollsPage() {
   const rolls = await listRollsCached()
@@ -19,9 +20,9 @@ export default async function RollsPage() {
       </div>
 
       <div className="flex gap-8 mb-10">
-        <Stat singular="roll" plural="rolls" value={rolls.length} />
-        <Stat singular="image" plural="images" value={totalImages} />
-        <Stat singular="indexed" plural="indexed" value={totalIndexed} />
+        <span className="text-sm tracking-tight tabular-nums text-primary-400">{pluralize(rolls.length, 'roll')}</span>
+        <span className="text-sm tracking-tight tabular-nums text-primary-400">{pluralize(totalImages, 'image')}</span>
+        <span className="text-sm tracking-tight tabular-nums text-primary-400">{pluralize(totalIndexed, 'indexed', 'indexed')}</span>
       </div>
 
       {rolls.length === 0 ? (
@@ -41,10 +42,3 @@ export default async function RollsPage() {
   )
 }
 
-function Stat({ singular, plural, value }: { singular: string; plural: string; value: number }) {
-  return (
-    <span className="text-sm tracking-tight tabular-nums text-primary-400">
-      {value.toLocaleString()} {value === 1 ? singular : plural}
-    </span>
-  )
-}

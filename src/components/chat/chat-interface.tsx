@@ -100,7 +100,7 @@ export function ChatInterface({
           <div className="flex flex-col items-center justify-center h-full gap-3 select-none pointer-events-none">
             <p className="text-4xl font-medium text-primary-200">{rollName}</p>
             <p className="text-sm text-primary-400">
-              Drop images anywhere to start
+              Drop images here to begin
             </p>
           </div>
         ) : (
@@ -174,7 +174,7 @@ export function ChatInterface({
           )}
 
           {/* Input container — Claude.ai-style card */}
-          <div className="rounded-2xl border border-primary-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-primary-200 bg-white shadow-sm">
 
             {/* Selection strip inside the box, above the textarea */}
             {selectedImageIds.length > 0 && (
@@ -345,7 +345,7 @@ function SelectionStrip({
               alt={img.original_filename ?? ""}
               width={24}
               height={24}
-              className="w-6 h-6 rounded-sm object-cover"
+              className="w-6 h-6 rounded-none object-cover"
             />
             <button
               onClick={() => onDeselect(id)}

@@ -118,7 +118,9 @@ export async function sendMessage(
     total,
     interpretedFilter,
     followups: interpretedFilter
-      ? deriveFollowups(interpretedFilter.filters, interpretedFilter.semantic_search)
+      ? (interpretedFilter.followups?.length
+          ? interpretedFilter.followups
+          : deriveFollowups(interpretedFilter.filters, interpretedFilter.semantic_search))
       : [],
   }
 }

@@ -1,8 +1,7 @@
+import { Suspense } from 'react'
 import { unauthorized } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { listRollsCached } from '@/lib/rolls/list'
-import { getRollThumbnails } from '@/lib/rolls/thumbnails'
-import { TopBar } from '@/components/shell/top-bar'
+import { TopBarData } from '@/components/shell/top-bar-data'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -10,18 +9,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) return unauthorized()
 
-  const rolls = await listRollsCached()
-  const rollThumbnails = await getRollThumbnails(rolls.map((r) => r.id))
-
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-white">
-      <TopBar
-        rolls={rolls}
-        rollThumbnails={rollThumbnails}
-        userEmail={user.email ?? ''}
-      />
+      <Suspense fallback={<div className="h-14 shrink-0 border-b border-primary-100 bg-white" />}>
+        <TopBarData userEmail={user.email ?? ''} />
+      </Suspense>
       <main className="flex-1 overflow-hidden bg-white flex flex-col min-h-0">
-        {children}
+        <Suspense>
+          {children}
+        </Suspense>
       </main>
     </div>
   )
