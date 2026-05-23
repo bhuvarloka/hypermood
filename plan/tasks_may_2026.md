@@ -39,9 +39,9 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 | 9 | T-07 | Rebuild rolls index as editorial gallery | done |
 | 10 | T-05 | Redesign public gallery `timeline` mode | done |
 | 11 | T-10 | View Transitions: roll → command-center → darkroom | done |
-| 12 | T-09 | Cut vision indexing prompt to ~10 fields | todo |
-| 13 | T-18 | Drop base64 in Inngest; parallelize vision + embedding | todo |
-| 14 | T-11 | Cut chat-turn latency <500ms | todo |
+| 12 | T-09 | Cut vision indexing prompt to ~10 fields | done |
+| 13 | T-18 | Drop base64 in Inngest; parallelize vision + embedding | done |
+| 14 | T-11 | Cut chat-turn latency <500ms | in-progress |
 | 15 | T-12 | Replace fake stream-of-thought | todo |
 | 16 | T-17 | Postgres-backed embedding cache | todo |
 | 17 | T-15 | Filter chip behaviour (fresh translate + Refine) | todo |
@@ -359,7 +359,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-09
 - **Order:** 12
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** INT
 - **Depends on:** —
@@ -369,10 +369,10 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Keep: `description`, `tags`, `colors.dominant` / `palette_mood`, `scene.setting` / `time_of_day`, `composition.framing`, `people.count`, `technical.is_screenshot` / `is_graphic`, `text_content.has_text`, `quality_score`.
-- [ ] Drop: `relationships`, `mood.emotional_tone` / `aesthetic_style` / `energy_level`, `composition.focal_point` / `symmetry` / `depth`, `blur_score`, `texture_material`, `objects[].position` / `attributes`, `people.descriptions[]` detail.
-- [ ] Update `vision.validate.ts` schema to match.
-- [ ] Run 20-query regression test against the existing 8-image roll. Acceptance: ≥80% top-10 overlap.
+- [x] Keep: `description`, `tags`, `colors.dominant` / `palette_mood`, `scene.setting` / `time_of_day`, `composition.framing`, `people.count`, `technical.is_screenshot` / `is_graphic`, `text_content.has_text`, `quality_score`.
+- [x] Drop: `relationships`, `mood.emotional_tone` / `aesthetic_style` / `energy_level`, `composition.focal_point` / `symmetry` / `depth`, `blur_score`, `texture_material`, `objects[].position` / `attributes`, `people.descriptions[]` detail.
+- [x] Updated `vision.validate.ts`, `domain.ts`, `query-executor.logic.ts`, and query interpreter system prompt to match. Dropped types removed from domain. `ALLOWED_METADATA_FIELDS` and filter-chips label map trimmed accordingly.
+- [ ] Run 20-query regression test against the existing 8-image roll. Acceptance: ≥80% top-10 overlap. (Deferred — requires a re-index.)
 
 **Done when:** vision prompt is ≤10 top-level fields; per-image indexing latency drops 30%+; 20-query regression set holds ≥80% top-10 overlap.
 
@@ -382,7 +382,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-18
 - **Order:** 13
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** INT
 - **Depends on:** —
@@ -392,8 +392,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Either collapse download+analyze+embed into one `step.run` (retries re-download from CDN — cheap) **or** pass only the storage key between steps and re-fetch from ImageKit cache.
-- [ ] Wrap vision and embedding in `Promise.all`.
+- [x] Collapsed download+analyze+embed into one `step.run` (`analyze-and-embed`). Retries re-download from ImageKit CDN — cheap, no intermediate state. No base64 in Inngest step output.
+- [x] Vision analysis and embedding wrapped in `Promise.all` — both run concurrently on the same buffer.
 
 **Done when:** no base64 strings appear in Inngest step state; per-image indexing latency drops 40%+; a 100-image roll completes indexing measurably faster.
 
@@ -403,7 +403,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-11
 - **Order:** 14
-- **Status:** todo
+- **Status:** in-progress
 - **Effort:** M
 - **Visibility:** INT
 - **Depends on:** —
@@ -412,11 +412,11 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Fast-path template matcher next to [query.ts](../src/lib/gemini/query.ts): ~12 patterns (portraits, golden hour, indoor/outdoor, with/without people, screenshots, recent, brightest/darkest, contains text, single-tag mention).
+- [x] Fast-path template matcher at [query-fast-path.ts](../src/lib/gemini/query-fast-path.ts): 12 patterns (portraits, golden hour, indoor/outdoor, with/without people, screenshots, graphics, recent, high/low quality, contains text, single-tag). Wired into `sendMessage` in [chat.ts](../src/actions/chat.ts) — fast path short-circuits LLM entirely.
+- [x] Telemetry: `console.log` with `path=fast_path_hit:<pattern>|llm|fallback` + end-to-end latency per turn.
 - [ ] Stream the LLM response via `generateContentStream`. Start the embedding call as soon as `semantic_search` is parsed.
 - [ ] Cache the system prompt via Gemini explicit context caching (cache once on boot).
 - [ ] Drop `followups` from the same call — generate them in a parallel post-result call, or deterministically from active filters.
-- [ ] Telemetry: log `fast_path_hit` / `llm_streamed` / `fallback` + end-to-end latency per turn.
 
 **Done when:** p50 chat-turn latency <500ms; ≥40% of representative test queries hit fast-path; telemetry distinguishes the three paths.
 

@@ -58,21 +58,20 @@ export const indexImage = inngest.createFunction(
       if (error) throw new Error(`Failed to update status: ${error.message}`)
     })
 
-    const imageBuffer = await step.run('download-image', async () => {
+    const { metadata, embedding } = await step.run('analyze-and-embed', async () => {
       const url = getImageUrl(image.storage_key)
       const response = await fetch(url)
       if (!response.ok) throw new Error(`Failed to download image: ${response.status}`)
-      const arrayBuffer = await response.arrayBuffer()
-      // Serialize as base64 so Inngest can persist step output
-      return Buffer.from(arrayBuffer).toString('base64')
-    })
+      const buffer = Buffer.from(await response.arrayBuffer())
 
-    const buffer = Buffer.from(imageBuffer, 'base64')
+      // Run vision analysis and embedding in parallel — both need the same buffer
+      const [analysisResult, embeddingResult] = await Promise.all([
+        analyzeImage(buffer),
+        embedImage(buffer),
+      ])
 
-    const metadata = await step.run('analyze-image', async () => {
-      const result = await analyzeImage(buffer)
-      if (!result) throw new Error('Vision analysis returned null')
-      return result
+      if (!analysisResult) throw new Error('Vision analysis returned null')
+      return { metadata: analysisResult, embedding: embeddingResult }
     })
 
     await step.run('save-metadata', async () => {
@@ -86,10 +85,6 @@ export const indexImage = inngest.createFunction(
         } as never, { onConflict: 'image_id' })
 
       if (error) throw new Error(`Failed to save metadata: ${error.message}`)
-    })
-
-    const embedding = await step.run('embed-image', async () => {
-      return await embedImage(buffer)
     })
 
     await step.run('save-embedding', async () => {

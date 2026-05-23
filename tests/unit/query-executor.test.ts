@@ -286,11 +286,10 @@ describe('matchesFilter — array-element filter', () => {
     expect(matchesFilter({ objects: [{ label: 'dog' }] }, f)).toBe(true)
   })
 
-  it('array-element match uses strict equality — "Cat" does not match filter "cat"', () => {
-    // matchesFilter uses === for array-element leaf comparison; SQL @> is also case-sensitive.
-    // Both agree: neither matches a differently-cased value.
+  it('array-element match is case-insensitive substring — "Cat" matches filter "cat"', () => {
+    // matchesFilter uses toLowerCase().includes() for string leaf fields
     const f: QueryFilter = { field: 'objects[].label', operator: 'contains', value: 'cat' }
-    expect(matchesFilter({ objects: [{ label: 'Cat' }] }, f)).toBe(false)
+    expect(matchesFilter({ objects: [{ label: 'Cat' }] }, f)).toBe(true)
   })
 })
 

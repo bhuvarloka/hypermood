@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { interpretQuery } from '@/lib/gemini/query'
 import { executeQuery } from '@/lib/gemini/query-executor'
 import { searchByImageReferences } from '@/lib/gemini/image-search'
+import { tryFastPath } from '@/lib/gemini/query-fast-path'
 import type { ChatMessage, Image } from '@/types/domain'
 import type { Json, TablesInsert } from '@/lib/supabase/types'
 import type { QueryPlan, QueryFilter } from '@/lib/gemini/query'
@@ -60,7 +61,28 @@ export async function sendMessage(
     resultImages = await searchByImageReferences(referenceImageIds, rollId, text || undefined)
     total = resultImages.length
   } else {
-    const plan = await interpretQuery(text)
+    const t0 = Date.now()
+    const fastPathResult = tryFastPath(text)
+
+    let plan: QueryPlan
+    let telemetryPath: string
+
+    if (fastPathResult) {
+      plan = fastPathResult.plan
+      telemetryPath = `fast_path_hit:${fastPathResult.matched}`
+    } else {
+      try {
+        plan = await interpretQuery(text)
+        telemetryPath = 'llm'
+      } catch {
+        // interpretQuery already degrades gracefully, but this guard handles unexpected throws
+        plan = { filters: [], semantic_search: text, sort: null, limit: 50, clarification_note: null, followups: [] }
+        telemetryPath = 'fallback'
+      }
+    }
+
+    console.log(`[chat] path=${telemetryPath} latency=${Date.now() - t0}ms query="${text.slice(0, 60)}"`)
+
     // Merge client-held active filters with new filters from this query.
     // Deduplication prevents the same filter appearing twice when the user
     // refines a search that already has that filter active.
