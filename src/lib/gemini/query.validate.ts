@@ -30,6 +30,49 @@ export type QueryPlan = {
   followups: string[]
 }
 
+// Deterministic follow-up suggestions derived from active filters.
+// Avoids an LLM round-trip for every query.
+const FOLLOWUP_MAP: Record<string, string[]> = {
+  'scene.setting:indoor':   ['With people', 'Golden hour'],
+  'scene.setting:outdoor':  ['Without people', 'Golden hour'],
+  'scene.time_of_day':      ['Without people', 'Close-up portraits'],
+  'people.count:0':         ['Outdoors only', 'Best quality'],
+  'people.count':           ['Close-up portraits', 'Outdoors only'],
+  'technical.is_screenshot': ['With text', 'Graphics'],
+  'technical.is_graphic':   ['With text', 'Screenshots only'],
+  'quality_score:gte':      ['Outdoors only', 'Portraits'],
+  'quality_score:lte':      ['Best quality shots'],
+  'text_content.has_text':  ['Screenshots only', 'Graphics'],
+  'tags':                   ['Best quality', 'Outdoors only'],
+}
+
+export function deriveFollowups(filters: QueryFilter[], semanticSearch: string | null): string[] {
+  const seen = new Set<string>()
+  const results: string[] = []
+
+  const add = (s: string | string[]) => {
+    const items = Array.isArray(s) ? s : [s]
+    for (const item of items) {
+      if (!seen.has(item)) { seen.add(item); results.push(item) }
+    }
+  }
+
+  for (const f of filters) {
+    const keyExact = `${f.field}:${f.operator === 'eq' ? f.value : f.operator}`
+    const keyField = f.field
+
+    if (FOLLOWUP_MAP[keyExact]) add(FOLLOWUP_MAP[keyExact])
+    else if (FOLLOWUP_MAP[keyField]) add(FOLLOWUP_MAP[keyField])
+  }
+
+  // Semantic-only query: generic discovery nudges
+  if (results.length === 0 && semanticSearch) {
+    add(['Best quality', 'Outdoors only', 'With people'])
+  }
+
+  return results.slice(0, 3)
+}
+
 export const VALID_OPERATORS: readonly FilterOperator[] = [
   'eq', 'neq', 'contains', 'gte', 'lte', 'gt', 'lt', 'in',
 ]

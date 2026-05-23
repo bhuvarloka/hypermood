@@ -246,7 +246,7 @@ function SaveForm({
 
       <div className="flex gap-3 items-center">
         <div className="flex gap-1 text-sm font-medium">
-          {(['masonry', 'timeline'] as GalleryLayout[]).map((opt) => (
+          {(['masonry', 'timeline', 'book', 'stage'] as GalleryLayout[]).map((opt) => (
             <button
               key={opt}
               onClick={() => onLayoutChange(opt)}

@@ -18,7 +18,7 @@ export type ChatRole = 'user' | 'assistant' | 'system'
 
 export type ChatMessage = Tables<'chat_messages'>
 
-export type GalleryLayout = 'masonry' | 'timeline' | 'grid'
+export type GalleryLayout = 'masonry' | 'timeline' | 'book' | 'stage'
 
 export type Gallery = Tables<'galleries'>
 

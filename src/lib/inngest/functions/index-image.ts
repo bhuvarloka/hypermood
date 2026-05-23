@@ -64,7 +64,7 @@ export const indexImage = inngest.createFunction(
       if (!response.ok) throw new Error(`Failed to download image: ${response.status}`)
       const buffer = Buffer.from(await response.arrayBuffer())
 
-      // Run vision analysis and embedding in parallel — both need the same buffer
+      // Run vision analysis and embedding in parallel to cut per-image latency
       const [analysisResult, embeddingResult] = await Promise.all([
         analyzeImage(buffer),
         embedImage(buffer),

@@ -5,6 +5,7 @@ import { interpretQuery } from '@/lib/gemini/query'
 import { executeQuery } from '@/lib/gemini/query-executor'
 import { searchByImageReferences } from '@/lib/gemini/image-search'
 import { tryFastPath } from '@/lib/gemini/query-fast-path'
+import { DEFAULT_PLAN, deriveFollowups } from '@/lib/gemini/query.validate'
 import type { ChatMessage, Image } from '@/types/domain'
 import type { Json, TablesInsert } from '@/lib/supabase/types'
 import type { QueryPlan, QueryFilter } from '@/lib/gemini/query'
@@ -28,6 +29,7 @@ export async function sendMessage(
   text: string,
   referenceImageIds?: string[],
   activeFilters?: QueryFilter[],
+  refineMode = false,
 ): Promise<SendMessageResult> {
   const supabase = await createClient()
 
@@ -67,28 +69,34 @@ export async function sendMessage(
     let plan: QueryPlan
     let telemetryPath: string
 
+    let embeddingPromise: Promise<number[]> | null = null
+
     if (fastPathResult) {
       plan = fastPathResult.plan
       telemetryPath = `fast_path_hit:${fastPathResult.matched}`
     } else {
       try {
-        plan = await interpretQuery(text)
+        // In refine mode, pass active filters so the LLM can write an accurate clarification_note.
+        const result = await interpretQuery(text, refineMode ? (activeFilters ?? []) : undefined)
+        plan = result.plan
+        embeddingPromise = result.embeddingPromise
         telemetryPath = 'llm'
       } catch {
         // interpretQuery already degrades gracefully, but this guard handles unexpected throws
-        plan = { filters: [], semantic_search: text, sort: null, limit: 50, clarification_note: null, followups: [] }
+        plan = { ...DEFAULT_PLAN, semantic_search: text }
         telemetryPath = 'fallback'
       }
     }
 
     console.log(`[chat] path=${telemetryPath} latency=${Date.now() - t0}ms query="${text.slice(0, 60)}"`)
 
-    // Merge client-held active filters with new filters from this query.
-    // Deduplication prevents the same filter appearing twice when the user
-    // refines a search that already has that filter active.
-    const mergedFilters = deduplicateFilters([...(activeFilters ?? []), ...plan.filters])
+    // Refine mode: accumulate active filters with new ones.
+    // Default (fresh): each query is an independent translation — no carry-over.
+    const mergedFilters = refineMode
+      ? deduplicateFilters([...(activeFilters ?? []), ...plan.filters])
+      : plan.filters
     interpretedFilter = { ...plan, filters: mergedFilters }
-    const queryResult = await executeQuery(interpretedFilter, rollId)
+    const queryResult = await executeQuery(interpretedFilter, rollId, embeddingPromise)
     resultImages = queryResult.images
     total = queryResult.total
   }
@@ -109,7 +117,9 @@ export async function sendMessage(
     images: resultImages,
     total,
     interpretedFilter,
-    followups: interpretedFilter?.followups ?? [],
+    followups: interpretedFilter
+      ? deriveFollowups(interpretedFilter.filters, interpretedFilter.semantic_search)
+      : [],
   }
 }
 
@@ -261,7 +271,8 @@ function deduplicateFilters(filters: QueryFilter[]): QueryFilter[] {
   filters.forEach((f, i) => {
     seen.set(`${f.field}|${f.operator}|${JSON.stringify(f.value)}`, i)
   })
-  return filters.filter((_, i) => [...seen.values()].includes(i))
+  const winningIndices = new Set(seen.values())
+  return filters.filter((_, i) => winningIndices.has(i))
 }
 
 function buildAssistantContent(resultCount: number, plan: QueryPlan | null): string {

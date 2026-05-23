@@ -6,15 +6,19 @@ import { getImageUrl, getLqipUrl } from '@/lib/imagekit/url'
 import type { GalleryWithImages, Image as ImageRecord } from '@/types/domain'
 import { Masonry, type MasonryRenderProps } from '@/components/ui/masonry'
 
-type ViewMode = 'masonry' | 'timeline'
+type ViewMode = 'masonry' | 'timeline' | 'book' | 'stage'
 
 type Props = {
   gallery: GalleryWithImages
 }
 
+function toViewMode(layout: string): ViewMode {
+  if (layout === 'timeline' || layout === 'book' || layout === 'stage') return layout
+  return 'masonry'
+}
+
 export function PublicGalleryView({ gallery }: Props) {
-  const supportsTimeline = gallery.layout === 'timeline'
-  const initialMode: ViewMode = gallery.layout === 'timeline' ? 'timeline' : 'masonry'
+  const initialMode = toViewMode(gallery.layout)
   const [mode, setMode] = useState<ViewMode>(initialMode)
   const [toggleVisible, setToggleVisible] = useState(true)
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -30,8 +34,6 @@ export function PublicGalleryView({ gallery }: Props) {
 
   // Fade out mode toggle after 3s of cursor inactivity.
   useEffect(() => {
-    if (!supportsTimeline) return
-
     function resetIdle() {
       if (!toggleVisibleRef.current) {
         toggleVisibleRef.current = true
@@ -53,7 +55,7 @@ export function PublicGalleryView({ gallery }: Props) {
       window.removeEventListener('touchstart', resetIdle)
       if (idleTimer.current) clearTimeout(idleTimer.current)
     }
-  }, [supportsTimeline])
+  }, [])
 
   const rollLabel = gallery.roll_name ? `ROLL — ${gallery.roll_name}` : null
 
@@ -82,33 +84,41 @@ export function PublicGalleryView({ gallery }: Props) {
       </header>
 
       {/* ---- Gallery content ---- */}
-      <main className="flex-1">
+      <main className={mode === 'stage' ? 'flex-1 overflow-hidden' : 'flex-1'}>
         {gallery.images.length === 0 ? (
           <div className="flex items-center justify-center py-32">
             <p className="text-2xl font-medium text-primary-200">No images in this gallery.</p>
           </div>
-        ) : mode === 'masonry' ? (
-          <MasonryGrid images={gallery.images} />
-        ) : (
+        ) : mode === 'timeline' ? (
           <TimelineStrip images={gallery.images} />
+        ) : mode === 'book' ? (
+          <BookGrid images={gallery.images} />
+        ) : mode === 'stage' ? (
+          <StageView images={gallery.images} />
+        ) : (
+          <MasonryGrid images={gallery.images} />
         )}
       </main>
 
       {/* ---- Floating mode toggle — bottom-center, fades on idle ---- */}
-      {supportsTimeline && (
-        <div
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-1 bg-white/90 backdrop-blur-sm border border-primary-100 p-1 animate-swiss"
-          style={{ opacity: toggleVisible ? 1 : 0, pointerEvents: toggleVisible ? 'auto' : 'none' }}
-          aria-hidden={!toggleVisible}
-        >
-          <ModeButton active={mode === 'masonry'} onClick={() => switchMode('masonry')} label="Masonry view">
-            <MosaicIcon active={mode === 'masonry'} />
-          </ModeButton>
-          <ModeButton active={mode === 'timeline'} onClick={() => switchMode('timeline')} label="Timeline view">
-            <StripIcon active={mode === 'timeline'} />
-          </ModeButton>
-        </div>
-      )}
+      <div
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-1 bg-white/90 backdrop-blur-sm border border-primary-100 p-1 animate-swiss"
+        style={{ opacity: toggleVisible ? 1 : 0, pointerEvents: toggleVisible ? 'auto' : 'none' }}
+        aria-hidden={!toggleVisible}
+      >
+        <ModeButton active={mode === 'masonry'} onClick={() => switchMode('masonry')} label="Masonry view">
+          <MosaicIcon active={mode === 'masonry'} />
+        </ModeButton>
+        <ModeButton active={mode === 'timeline'} onClick={() => switchMode('timeline')} label="Timeline view">
+          <StripIcon active={mode === 'timeline'} />
+        </ModeButton>
+        <ModeButton active={mode === 'book'} onClick={() => switchMode('book')} label="Book view">
+          <BookIcon active={mode === 'book'} />
+        </ModeButton>
+        <ModeButton active={mode === 'stage'} onClick={() => switchMode('stage')} label="Stage view">
+          <StageIcon active={mode === 'stage'} />
+        </ModeButton>
+      </div>
     </div>
   )
 }
@@ -125,6 +135,8 @@ function ModeButton({ active, onClick, label, children }: { active: boolean; onC
     </button>
   )
 }
+
+// ---- Mode icons ---- //
 
 function MosaicIcon({ active }: { active: boolean }) {
   const o = active ? 1 : 0.4
@@ -145,6 +157,29 @@ function StripIcon({ active }: { active: boolean }) {
       <rect x="1" y="4" width="3" height="8" fill="currentColor" opacity={o} />
       <rect x="6" y="2" width="4" height="12" fill="currentColor" opacity={o} />
       <rect x="12" y="5" width="3" height="6" fill="currentColor" opacity={o} />
+    </svg>
+  )
+}
+
+function BookIcon({ active }: { active: boolean }) {
+  const o = active ? 1 : 0.4
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="4" height="7" fill="currentColor" opacity={o} />
+      <rect x="7" y="1" width="4" height="4" fill="currentColor" opacity={o} />
+      <rect x="7" y="7" width="4" height="8" fill="currentColor" opacity={o} />
+      <rect x="13" y="1" width="2" height="14" fill="currentColor" opacity={o} />
+      <rect x="1" y="10" width="4" height="5" fill="currentColor" opacity={o} />
+    </svg>
+  )
+}
+
+function StageIcon({ active }: { active: boolean }) {
+  const o = active ? 1 : 0.4
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1" y="2" width="14" height="12" fill="currentColor" opacity={o} />
+      <rect x="6" y="13" width="4" height="1" fill="white" />
     </svg>
   )
 }
@@ -174,6 +209,84 @@ function MasonryGrid({ images }: { images: GalleryImageRecord[] }) {
       gap={64}
       className="p-8 md:p-16"
     />
+  )
+}
+
+// ---- Book grid — dense ratio-aware masonry, tighter packing ---- //
+
+function BookMasonryCell({ data, width }: MasonryRenderProps<GalleryImageRecord & { index: number }>) {
+  const { index, ...image } = data
+  return <GalleryImage image={image} index={index} width={width} />
+}
+
+function BookGrid({ images }: { images: GalleryImageRecord[] }) {
+  const items = images.map((img, i) => ({ ...img, index: i }))
+  return (
+    <Masonry
+      items={items}
+      getKey={(item) => item.id}
+      getAspectRatio={(item) => {
+        const w = item.width ?? 1
+        const h = item.height ?? 1
+        return w / h
+      }}
+      renderItem={BookMasonryCell}
+      columnWidth={240}
+      gap={8}
+      className="p-2"
+    />
+  )
+}
+
+// ---- Stage view — one image per viewport, vertical scroll-snap ---- //
+
+function StageView({ images }: { images: GalleryImageRecord[] }) {
+  return (
+    <div
+      className="h-[calc(100vh-var(--header-h,80px))] overflow-y-scroll"
+      style={{ scrollSnapType: 'y mandatory' }}
+    >
+      {images.map((image, i) => (
+        <StageCell key={image.id} image={image} index={i} />
+      ))}
+    </div>
+  )
+}
+
+function StageCell({ image, index }: { image: GalleryImageRecord; index: number }) {
+  const src = getImageUrl(image.storage_key, { width: 1920, quality: 90, format: 'webp' })
+  const lqip = getLqipUrl(image.storage_key)
+  const w = image.width ?? 1920
+  const h = image.height ?? 1080
+  const seq = String(index + 1).padStart(3, '0')
+  const caption = image.subject ? `${image.subject} — ${seq}` : seq
+
+  // Gradient bleed: each frame bleeds its dominant colour via a subtle vignette
+  return (
+    <div
+      className="relative flex items-center justify-center bg-primary-950"
+      style={{
+        height: 'calc(100vh - var(--header-h, 80px))',
+        scrollSnapAlign: 'start',
+      }}
+    >
+      <Image
+        src={src}
+        alt={image.original_filename ?? ''}
+        width={w}
+        height={h}
+        sizes="100vw"
+        className="max-h-full max-w-full object-contain"
+        placeholder="blur"
+        blurDataURL={lqip}
+        style={{ viewTransitionName: `gallery-image-${image.id}` }}
+        priority={index === 0}
+      />
+      {/* Caption — bottom-center, low contrast */}
+      <p className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs text-white/40 tracking-wide tabular-nums pointer-events-none">
+        {caption}
+      </p>
+    </div>
   )
 }
 

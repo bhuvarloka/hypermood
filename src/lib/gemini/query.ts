@@ -1,11 +1,33 @@
 import { ai, tryParseJson } from './parse-utils'
 import { validateQueryPlan, DEFAULT_PLAN } from './query.validate'
+import { embedText } from './embedding'
 import type { QueryPlan } from './query.validate'
 
 const QUERY_MODEL = process.env.GEMINI_QUERY_MODEL ?? 'gemini-3-flash-preview'
 
 // Re-export types so existing imports from '@/lib/gemini/query' continue to work.
 export type { FilterOperator, QueryFilter, QuerySort, QueryPlan } from './query.validate'
+
+// Cached system prompt resource name; populated on first use.
+let cachedSystemPromptName: string | null = null
+let cacheInitPromise: Promise<void> | null = null
+
+async function initSystemPromptCache(): Promise<void> {
+  try {
+    const cache = await ai.caches.create({
+      model: QUERY_MODEL,
+      config: {
+        displayName: 'hypermood-query-system-prompt',
+        systemInstruction: SYSTEM_PROMPT,
+        ttl: '3600s',
+      },
+    })
+    cachedSystemPromptName = cache.name ?? null
+  } catch {
+    // Context caching may not be available for this model/region — degrade silently.
+    cachedSystemPromptName = null
+  }
+}
 
 const SYSTEM_PROMPT = `You are a query interpreter for a semantic image search engine. Your job is to translate natural language queries into a structured JSON query plan that the system will use to filter and rank images.
 
@@ -60,13 +82,19 @@ RULES:
 8. limit: default 50, max 200. Increase for "show me all" style requests.
 9. For greetings, questions about the system, or completely non-search messages: return filters=[], semantic_search=null, sort=null, limit=50, and explain in clarification_note.
 10. For ambiguous queries: return your best-effort plan AND set clarification_note explaining what you assumed.
-11. Always include followups: 2-3 short contextual follow-up queries that reference what was just searched. They must be specific to the current query — not generic. Examples: if the query was about outdoor scenes, suggest "Narrow to golden hour only" or "Without people". If the query returns people, suggest "Show only close-ups" or "Split by time of day". For greetings/non-search queries, followups may be empty.
-12. Translate ONLY the current query into filters. Do not carry over, inherit, or reference any prior filters — the caller handles filter accumulation. Treat every query as an independent translation task.
+11. Translate ONLY the current query into filters. Do not carry over, inherit, or reference any prior filters — the caller handles filter accumulation. Treat every query as an independent translation task.
 
 Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Just the JSON.`
 
-function buildUserPrompt(query: string): string {
-  return `Translate this query into a JSON filter plan: "${query}"
+function buildUserPrompt(
+  query: string,
+  activeFilters?: import('./query.validate').QueryFilter[],
+): string {
+  const contextBlock = activeFilters && activeFilters.length > 0
+    ? `\n\nCurrently active filters (already applied to the result set — your clarification_note must acknowledge these if relevant):\n${JSON.stringify(activeFilters, null, 2)}\n`
+    : ''
+
+  return `Translate this query into a JSON filter plan: "${query}"${contextBlock}
 
 Return a JSON object with exactly this structure:
 
@@ -81,34 +109,63 @@ Return a JSON object with exactly this structure:
   "semantic_search": "text to embed and search by similarity, or null",
   "sort": { "field": "dot.notation.field", "direction": "asc | desc" } or null,
   "limit": 50,
-  "clarification_note": "explanation if query is ambiguous or non-search, else null",
-  "followups": ["contextual follow-up 1", "contextual follow-up 2"]
+  "clarification_note": "explanation if query is ambiguous or non-search, else null"
 }`
 }
 
-export async function interpretQuery(query: string): Promise<QueryPlan> {
-  // On any failure, degrade to pure semantic search so chat always returns results
+// Regex to extract semantic_search value from partial JSON as the stream arrives.
+// Matches the string value (or null) immediately after the key.
+const SEMANTIC_SEARCH_RE = /"semantic_search"\s*:\s*("(?:[^"\\]|\\.)*"|null)/
+
+export async function interpretQuery(
+  query: string,
+  activeFilters?: import('./query.validate').QueryFilter[],
+): Promise<{ plan: QueryPlan; embeddingPromise: Promise<number[]> | null }> {
   const errorFallback: QueryPlan = { ...DEFAULT_PLAN, semantic_search: query }
 
+  // Lazily init the system-prompt cache on first LLM call.
+  if (!cacheInitPromise) cacheInitPromise = initSystemPromptCache()
+  await cacheInitPromise
+
   try {
-    const response = await ai.models.generateContent({
+    const stream = await ai.models.generateContentStream({
       model: QUERY_MODEL,
-      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(query) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(query, activeFilters) }] }],
       config: {
-        systemInstruction: SYSTEM_PROMPT,
+        ...(cachedSystemPromptName
+          ? { cachedContent: cachedSystemPromptName }
+          : { systemInstruction: SYSTEM_PROMPT }),
         responseMimeType: 'application/json',
         temperature: 0.0,
       },
     })
 
-    const text = response.text
-    if (!text) return errorFallback
+    let accumulated = ''
+    let embeddingPromise: Promise<number[]> | null = null
 
-    const parsed = tryParseJson(text)
-    if (parsed === null) return errorFallback
+    for await (const chunk of stream) {
+      accumulated += chunk.text ?? ''
 
-    return validateQueryPlan(parsed)
+      // As soon as semantic_search is visible in the partial JSON, kick off the
+      // embedding call in parallel — by the time the stream finishes and we have
+      // the full plan, the embed is already inflight or done.
+      if (!embeddingPromise) {
+        const match = SEMANTIC_SEARCH_RE.exec(accumulated)
+        if (match) {
+          const raw = match[1]
+          const semanticSearch = raw === 'null' ? null : JSON.parse(raw) as string
+          if (semanticSearch) {
+            embeddingPromise = embedText(semanticSearch)
+          }
+        }
+      }
+    }
+
+    const parsed = tryParseJson(accumulated)
+    if (parsed === null) return { plan: errorFallback, embeddingPromise: null }
+
+    return { plan: validateQueryPlan(parsed), embeddingPromise }
   } catch {
-    return errorFallback
+    return { plan: errorFallback, embeddingPromise: null }
   }
 }

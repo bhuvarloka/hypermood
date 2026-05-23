@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { embedText } from '@/lib/gemini/embedding'
 import type { QueryPlan } from '@/lib/gemini/query'
-import { IMAGES_TABLE_COLUMNS, buildClause, matchesFilter } from './query-executor.logic'
+import { IMAGES_TABLE_COLUMNS, buildClause } from './query-executor.logic'
 import type { Image } from '@/types/domain'
 
 // Server-process cache: same semantic_search string always produces the same vector,
@@ -13,7 +13,7 @@ export type QueryResult = {
   total: number
 }
 
-export async function executeQuery(plan: QueryPlan, rollId: string): Promise<QueryResult> {
+export async function executeQuery(plan: QueryPlan, rollId: string, precomputedEmbedding?: Promise<number[]> | null): Promise<QueryResult> {
   const supabase = await createClient()
   const { filters, semantic_search, sort, limit } = plan
 
@@ -21,7 +21,8 @@ export async function executeQuery(plan: QueryPlan, rollId: string): Promise<Que
 
   if (semantic_search) {
     const cached = embeddingCache.get(semantic_search)
-    const queryVector = cached ?? await embedText(semantic_search)
+    // Use the pre-computed embedding promise if available (started in parallel during LLM stream).
+    const queryVector = cached ?? await (precomputedEmbedding ?? embedText(semantic_search))
     if (!cached) embeddingCache.set(semantic_search, queryVector)
     const vectorLiteral = `[${queryVector.join(',')}]`
 
@@ -65,12 +66,32 @@ export async function executeQuery(plan: QueryPlan, rollId: string): Promise<Que
     return { images: sorted, total: sorted.length }
   }
 
-  // Metadata-only path: fetch indexed images with their metadata, then filter client-side.
-  // PostgREST cannot apply raw JSONB WHERE clauses via the JS client, so we over-fetch
-  // and filter in JS. Acceptable at ADR-004 scale ceiling (~1000 images/roll).
+  // Metadata-only path: delegate filtering to the filter_images_by_metadata RPC so
+  // the WHERE clause runs server-side instead of over-fetching and filtering in JS.
+  const metadataClauses = filters.map(buildClause).filter((c): c is string => c !== null)
+
+  if (metadataClauses.length > 0) {
+    const sortField = sort && IMAGES_TABLE_COLUMNS.has(sort.field) ? sort.field : 'uploaded_at'
+    const sortAsc = sort ? sort.direction === 'asc' : false
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rpcResult = await (supabase as any).rpc('filter_images_by_metadata', {
+      p_roll_id: rollId,
+      p_where_clause: metadataClauses.join(' AND '),
+      p_sort_field: sortField,
+      p_sort_asc: sortAsc,
+      p_limit: limit,
+    })
+
+    if (rpcResult.error) throw new Error(rpcResult.error.message)
+    const images = (rpcResult.data ?? []) as Image[]
+    return { images, total: images.length }
+  }
+
+  // No filters at all — plain fetch of all indexed images in this roll.
   let query = supabase
     .from('images')
-    .select('*, image_metadata!inner(metadata)')
+    .select('*')
     .eq('roll_id', rollId)
     .eq('status', 'indexed')
 
@@ -80,27 +101,12 @@ export async function executeQuery(plan: QueryPlan, rollId: string): Promise<Que
     query = query.order('uploaded_at', { ascending: false })
   }
 
-  query = query.limit(Math.min(limit * 3, 500))
+  query = query.limit(limit)
 
   const { data, error } = await query
   if (error) throw new Error(error.message)
 
-  const metadataFilters = filters.filter(f => !IMAGES_TABLE_COLUMNS.has(f.field))
-
-  const filtered = (data ?? []).filter(row => {
-    const meta = (row as Record<string, unknown> & { image_metadata?: { metadata: unknown } }).image_metadata?.metadata
-    if (!meta || typeof meta !== 'object') return metadataFilters.length === 0
-    for (const filter of metadataFilters) {
-      if (!matchesFilter(meta as Record<string, unknown>, filter)) return false
-    }
-    return true
-  })
-
-  const images = filtered.slice(0, limit).map(row => {
-    const { image_metadata: _omit, ...image } = row as Record<string, unknown> & { image_metadata?: unknown }
-    return image as Image
-  })
-
+  const images = (data ?? []) as Image[]
   return { images, total: images.length }
 }
 

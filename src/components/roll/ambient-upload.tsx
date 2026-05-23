@@ -12,13 +12,62 @@ type UploadState =
   | { phase: 'dragging' }
   | { phase: 'uploading'; done: number; total: number }
 
+type AuthParams = {
+  token: string
+  signature: string
+  expire: number
+  publicKey: string
+}
+
+type ImageKitUploadResponse = {
+  filePath: string
+  width?: number
+  height?: number
+  name: string
+}
+
+async function fetchAuthParams(): Promise<AuthParams> {
+  const res = await fetch('/api/images/upload-auth')
+  if (!res.ok) throw new Error('Failed to get upload auth')
+  return res.json() as Promise<AuthParams>
+}
+
+async function uploadFileToImageKit(
+  file: File,
+  rollId: string,
+  auth: AuthParams,
+): Promise<ImageKitUploadResponse> {
+  const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.\-]/g, '_')
+
+  const form = new FormData()
+  form.append('file', file)
+  form.append('fileName', sanitizedFilename)
+  form.append('folder', `hypermood/rolls/${rollId}`)
+  form.append('publicKey', auth.publicKey)
+  form.append('token', auth.token)
+  form.append('signature', auth.signature)
+  form.append('expire', String(auth.expire))
+  form.append('useUniqueFileName', 'false')
+
+  const res = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`ImageKit upload failed (${res.status}): ${text}`)
+  }
+
+  return res.json() as Promise<ImageKitUploadResponse>
+}
+
 export function AmbientUpload({ rollId, children }: Props) {
   const [state, setState] = useState<UploadState>({ phase: 'idle' })
   // Track drag entries to handle nested child elements correctly
   const dragCountRef = useRef(0)
 
   // Reset on window dragend — covers Escape / drop outside browser window
-  // where the container never receives a dragleave to decrement the counter
   useEffect(() => {
     const reset = () => {
       dragCountRef.current = 0
@@ -59,22 +108,47 @@ export function AmbientUpload({ rollId, children }: Props) {
 
       setState({ phase: 'uploading', done: 0, total: files.length })
 
-      // Upload in batches of 5 to avoid overwhelming the server action
-      const BATCH = 5
-      let done = 0
       try {
-        for (let i = 0; i < files.length; i += BATCH) {
-          const batch = files.slice(i, i + BATCH)
-          const fd = new FormData()
-          fd.append('rollId', rollId)
-          batch.forEach((f) => fd.append('files', f))
-          const res = await fetch('/api/images/upload', { method: 'POST', body: fd })
-          if (!res.ok) throw new Error(await res.text())
-          done += batch.length
-          setState({ phase: 'uploading', done, total: files.length })
-        }
+        // One auth token covers all files in a single drop (same expiry window)
+        const auth = await fetchAuthParams()
+
+        let done = 0
+        const registered: {
+          storagePath: string
+          originalFilename: string
+          fileSizeBytes: number
+          mimeType: string
+          width: number | null
+          height: number | null
+          capturedAt: string | null
+        }[] = []
+
+        // Upload files concurrently; update progress as each one completes
+        await Promise.all(
+          files.map(async (file) => {
+            const result = await uploadFileToImageKit(file, rollId, auth)
+            registered.push({
+              storagePath: result.filePath,
+              originalFilename: file.name,
+              fileSizeBytes: file.size,
+              mimeType: file.type,
+              width: result.width ?? null,
+              height: result.height ?? null,
+              capturedAt: null,
+            })
+            done += 1
+            setState({ phase: 'uploading', done, total: files.length })
+          }),
+        )
+
+        // Single register call after all uploads complete
+        const res = await fetch('/api/images/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rollId, files: registered }),
+        })
+        if (!res.ok) throw new Error(await res.text())
       } finally {
-        // Always return to idle — whether upload succeeded or failed
         setState({ phase: 'idle' })
       }
     },
@@ -105,11 +179,11 @@ export function AmbientUpload({ rollId, children }: Props) {
         <p className="text-3xl font-medium">Drop to index.</p>
       </div>
 
-      {/* Inline progress readout — unobtrusive, mono, updates in place */}
+      {/* Inline progress readout — unobtrusive, updates in place */}
       {isUploading && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
           <p className="text-sm tabular-nums text-primary-400">
-            Uploading &amp; Indexing {state.done} of {state.total}...
+            Uploading {state.done} of {state.total}…
           </p>
         </div>
       )}

@@ -41,6 +41,8 @@ export function ChatInterface({
     selectedImageIds,
     activePlan,
     followups,
+    refineMode,
+    setRefineMode,
     liveImages,
     setLiveImages,
     darkroom,
@@ -130,6 +132,24 @@ export function ChatInterface({
         <div className="w-full max-w-2xl px-4 pb-5 flex flex-col gap-2 pointer-events-auto">
 
 
+          {/* Refine toggle — only when a result set is active */}
+          {resultImageIds !== null && (
+            <button
+              onClick={() => setRefineMode((v) => !v)}
+              disabled={sending}
+              className={`self-start text-sm px-3 py-1 rounded-full border animate-swiss disabled:opacity-50 ${
+                refineMode
+                  ? "bg-primary-900 text-white border-primary-900"
+                  : "border-primary-200 text-primary-400 hover:border-primary-800 hover:text-primary-900"
+              }`}
+              aria-pressed={refineMode}
+            >
+              {refineMode
+                ? `Refining within ${resultImageIds.length} results`
+                : "Refine"}
+            </button>
+          )}
+
           {/* Idle selection nudge — surfaces after 2+ images selected for >3s */}
           {selectionIdlePrompt && !hasActiveFilter && (
             <p className="text-sm text-primary-400 truncate px-1 animate-bloom">
@@ -192,7 +212,7 @@ export function ChatInterface({
               {/* Status / result count */}
               <div className="text-sm tabular-nums text-primary-400 flex items-center gap-2">
                 {processing ? (
-                  <span className="animate-pulse">Searching…</span>
+                  <span className="animate-pulse">thinking…</span>
                 ) : resultImageIds !== null ? (
                   <>
                     <span>{resultImageIds.length} of {liveImageCount}</span>

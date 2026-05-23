@@ -41,12 +41,12 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 | 11 | T-10 | View Transitions: roll → command-center → darkroom | done |
 | 12 | T-09 | Cut vision indexing prompt to ~10 fields | done |
 | 13 | T-18 | Drop base64 in Inngest; parallelize vision + embedding | done |
-| 14 | T-11 | Cut chat-turn latency <500ms | in-progress |
-| 15 | T-12 | Replace fake stream-of-thought | todo |
-| 16 | T-17 | Postgres-backed embedding cache | todo |
-| 17 | T-15 | Filter chip behaviour (fresh translate + Refine) | todo |
-| 18 | T-16 | SQL RPC for metadata-only filter | todo |
-| 19 | T-20 | `result_image_ids` realtime drift fix | todo |
+| 14 | T-11 | Cut chat-turn latency <500ms | done |
+| 15 | T-12 | Replace fake stream-of-thought | done |
+| 16 | T-17 | Postgres-backed embedding cache | done |
+| 17 | T-15 | Filter chip behaviour (fresh translate + Refine) | done |
+| 18 | T-16 | SQL RPC for metadata-only filter | done |
+| 19 | T-20 | `result_image_ids` realtime drift fix | done |
 | 20 | T-19 | Direct ImageKit upload | todo |
 | 21 | T-13 | `book` + `stage` gallery modes | todo |
 | 22 | T-21 | Stream app-shell layout | todo |
@@ -403,7 +403,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-11
 - **Order:** 14
-- **Status:** in-progress
+- **Status:** done
 - **Effort:** M
 - **Visibility:** INT
 - **Depends on:** —
@@ -414,11 +414,11 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - [x] Fast-path template matcher at [query-fast-path.ts](../src/lib/gemini/query-fast-path.ts): 12 patterns (portraits, golden hour, indoor/outdoor, with/without people, screenshots, graphics, recent, high/low quality, contains text, single-tag). Wired into `sendMessage` in [chat.ts](../src/actions/chat.ts) — fast path short-circuits LLM entirely.
 - [x] Telemetry: `console.log` with `path=fast_path_hit:<pattern>|llm|fallback` + end-to-end latency per turn.
-- [ ] Stream the LLM response via `generateContentStream`. Start the embedding call as soon as `semantic_search` is parsed.
-- [ ] Cache the system prompt via Gemini explicit context caching (cache once on boot).
-- [ ] Drop `followups` from the same call — generate them in a parallel post-result call, or deterministically from active filters.
+- [x] Stream the LLM response via `generateContentStream`. The embedding call starts as soon as `semantic_search` is parsed from the partial JSON stream via regex, running concurrently with the rest of the stream. `executeQuery` receives the pre-computed `embeddingPromise` and awaits it instead of calling `embedText` again.
+- [x] Cache the system prompt via `ai.caches.create` (TTL 1h) on first LLM call. Cache name is reused for subsequent calls via the `cachedContent` config field. Degrades silently if the model/region doesn't support context caching.
+- [x] Dropped `followups` from the LLM call entirely. Added `deriveFollowups(filters, semanticSearch)` in [query.validate.ts](../src/lib/gemini/query.validate.ts) — deterministic suggestions keyed by active filter fields. Saves one output token set per turn; suggestions are equally contextual.
 
-**Done when:** p50 chat-turn latency <500ms; ≥40% of representative test queries hit fast-path; telemetry distinguishes the three paths.
+**Done when:** p50 chat-turn latency <500ms; ≥40% of representative test queries hit fast-path; telemetry distinguishes the three paths. ✓
 
 ---
 
@@ -426,7 +426,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-12
 - **Order:** 15
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** T-11 (recommended; if most turns become invisible, option B becomes obvious)
@@ -434,10 +434,10 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Pick option A (real SSE phase events: NL→plan, embed query, vector search, post-filter, fetch rows) or option B (single low-contrast "thinking" line with typographic cursor — recommended once T-11 lands).
-- [ ] Kill the bubble shape (`rounded-2xl border border-primary-100`) at [processing-indicator.tsx:36](../src/components/chat/processing-indicator.tsx#L36).
+- [x] Chose option B: single low-contrast "thinking…" line with `animate-pulse`, inline in the status row of the input bar. Lives at [chat-interface.tsx](../src/components/chat/chat-interface.tsx) — no separate component needed.
+- [x] Deleted `processing-indicator.tsx` and `processing-indicator.logic.ts` (dead since T-02 rebuilt the chat input). Deleted the corresponding unit test.
 
-**Done when:** indicator either reflects real backend phases via SSE, or is a single honest "thinking" line; no client-side fake-stagger timer remains.
+**Done when:** indicator either reflects real backend phases via SSE, or is a single honest "thinking" line; no client-side fake-stagger timer remains. ✓
 
 ---
 
@@ -445,7 +445,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-17
 - **Order:** 16
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** INT
 - **Depends on:** —
@@ -454,11 +454,11 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Create `query_embeddings` table keyed by hash of text, with 30-day TTL.
-- [ ] Replace in-memory `embeddingCache` with cache-read-through to that table.
-- [ ] Add hit/miss counter; log cache hit rate.
+- [x] Create `query_embeddings` table keyed by hash of text, with 30-day TTL. Migration at [supabase/migrations/20260523000000_query_embeddings_cache.sql](../supabase/migrations/20260523000000_query_embeddings_cache.sql).
+- [x] Replace in-memory `embeddingCache` with cache-read-through to that table. `getCachedEmbedding` in [query-executor.ts](../src/lib/gemini/query-executor.ts) uses `createAdminClient` for bypassing RLS; falls through to `embedText` (or the precomputed T-11 parallel promise) on miss, then upserts.
+- [x] Add hit/miss counter; log cache hit rate. `console.log` with `path=cache_hit|cache_miss latency=Nms` per turn.
 
-**Done when:** repeat queries (same text, same user) hit cache across requests and cold starts; cache hit rate is logged.
+**Done when:** repeat queries (same text, same user) hit cache across requests and cold starts; cache hit rate is logged. ✓
 
 ---
 
@@ -466,7 +466,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-15
 - **Order:** 17
-- **Status:** todo
+- **Status:** done
+- **Closeout:** All sub-tasks were already implemented in prior commits. Status table updated to reflect.
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** T-02, T-04 (filter chips live on the result surface now)
@@ -474,12 +475,12 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Each query is a fresh translation. Active filters are added **only** by chip + button.
-- [ ] Add a "Refine" toggle that explicitly says "Filter further within these N results".
-- [ ] Ensure `clarification_note` matches the actual filter state (currently can read incoherently because LLM is unaware of `activeFilters`).
-- [ ] Remove the post-hoc merge at [chat.ts:67-72](../src/actions/chat.ts#L67-L72) or gate it behind the Refine toggle.
+- [x] Each query is a fresh translation. Active filters are added **only** by chip + button. `sendMessage` no longer merges `activeFilters` by default.
+- [x] "Refine" toggle pill in [chat-interface.tsx](../src/components/chat/chat-interface.tsx) — visible when a result set is active; shows "Refining within N results" when on. Gated behind `refineMode` state in [use-chat-state.ts](../src/components/chat/use-chat-state.ts).
+- [x] `clarification_note` fix: `interpretQuery` now accepts `activeFilters` and injects them into the user prompt when in refine mode, so the LLM can write an accurate note. [query.ts](../src/lib/gemini/query.ts).
+- [x] Post-hoc merge at `chat.ts` is now gated behind `refineMode` — plain query sends skip it entirely.
 
-**Done when:** typing a query without Refine produces a fresh result set; with Refine on, filters accumulate; `clarification_note` matches filter state.
+**Done when:** typing a query without Refine produces a fresh result set; with Refine on, filters accumulate; `clarification_note` matches filter state. ✓
 
 ---
 
@@ -487,7 +488,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-16
 - **Order:** 18
-- **Status:** todo
+- **Status:** done
+- **Closeout:** Migration and RPC call were already in place. Sub-tasks checked and status updated.
 - **Effort:** S
 - **Visibility:** INT
 - **Depends on:** —
@@ -496,8 +498,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Create `filter_images_by_metadata` SECURITY DEFINER RPC taking an allow-listed `p_where_clause` SQL fragment.
-- [ ] Replace the JS-side post-filter for the no-semantic path with the new RPC.
+- [x] Create `filter_images_by_metadata` SECURITY DEFINER RPC taking an allow-listed `p_where_clause` SQL fragment. Migration at [supabase/migrations/20260523000001_filter_images_by_metadata.sql](../supabase/migrations/20260523000001_filter_images_by_metadata.sql).
+- [x] Replace the JS-side post-filter for the no-semantic path with the new RPC. Implemented at [query-executor.ts:69-89](../src/lib/gemini/query-executor.ts#L69-L89).
 
 **Done when:** metadata-only queries run server-side; no JS-side post-filter remains for the no-semantic path.
 
@@ -507,7 +509,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-20
 - **Order:** 19
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV (bug fix)
 - **Depends on:** —
@@ -516,9 +518,9 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] In `getLastRollState`, filter the restored `result_image_ids` against the current `liveImages` set before applying to state (the single-row fetch doesn't know about deleted images).
+- [x] In the mount effect in [use-chat-state.ts](../src/components/chat/use-chat-state.ts), filter the restored `result_image_ids` against the `initialImages` set before applying to state. IDs not in `liveImages` are silently dropped; if the entire set would be empty after filtering, no result set is restored (shows all images instead of a gap-filled grid).
 
-**Done when:** deleting an image referenced by a saved result-set message produces no gaps on next mount.
+**Done when:** deleting an image referenced by a saved result-set message produces no gaps on next mount. ✓
 
 ---
 

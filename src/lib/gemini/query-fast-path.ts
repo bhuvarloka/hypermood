@@ -51,7 +51,7 @@ const PATTERNS: PatternEntry[] = [
   },
   {
     name: 'indoor',
-    test: /\b(indoor|inside|interior|inside)\b/i,
+    test: /\b(indoor|inside|interior)\b/i,
     build: () => ({
       filters: [{ field: 'scene.setting', operator: 'eq', value: 'indoor' }],
       semantic_search: null,
@@ -136,8 +136,7 @@ const PATTERNS: PatternEntry[] = [
   },
 ]
 
-// Matches queries that are a plain single tag/word (2–30 chars, no spaces, no special chars).
-// These skip the LLM entirely: search by tag containment + semantic search on the word.
+// Single-word queries skip the LLM: direct tag containment + semantic search.
 const SINGLE_TAG_RE = /^[a-z0-9\-_]{2,30}$/i
 
 export function tryFastPath(query: string): FastPathResult {

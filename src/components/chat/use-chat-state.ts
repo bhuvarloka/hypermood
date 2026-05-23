@@ -26,6 +26,7 @@ export function useChatState({ rollId, initialImages }: Props) {
   const [activePlan, setActivePlan] = useState<QueryPlan | null>(null);
   const [liveImages, setLiveImages] = useState<ImageRecord[]>(initialImages);
   const [followups, setFollowups] = useState<string[]>([]);
+  const [refineMode, setRefineMode] = useState(false);
 
   const [darkroom, setDarkroom] = useState<{
     images: ImageRecord[];
@@ -41,11 +42,16 @@ export function useChatState({ rollId, initialImages }: Props) {
   const resultImageIdsRef = useRef(resultImageIds);
   resultImageIdsRef.current = resultImageIds;
 
-  // Restore last result set + active plan from the most recent assistant message
+  // Restore last result set + active plan from the most recent assistant message.
+  // Filter restored IDs against liveImages to discard any that were deleted since the query ran.
   useEffect(() => {
+    const liveIdSet = new Set(initialImages.map((img) => img.id));
     getLastRollState(rollId)
       .then(({ resultImageIds: ids, activePlan: plan }) => {
-        if (ids) setResultImageIds(ids);
+        if (ids) {
+          const filtered = ids.filter((id) => liveIdSet.has(id));
+          if (filtered.length > 0) setResultImageIds(filtered);
+        }
         if (plan) setActivePlan(plan);
       })
       .catch(console.error);
@@ -65,16 +71,19 @@ export function useChatState({ rollId, initialImages }: Props) {
   }, [selectedImageIds]);
 
   const submitMessage = useCallback(
-    async (text: string, refIds?: string[], freshStart = false) => {
+    async (text: string, refIds?: string[]) => {
       setSending(true);
       setProcessing(true);
       setFollowups([]);
 
-      const activeFilters =
-        !freshStart && !refIds && activePlan ? activePlan.filters : undefined;
+      // In refine mode, pass the current active filters so the server can merge them
+      // and the LLM can write an accurate clarification_note.
+      const activeFilters = refineMode && !refIds && activePlan
+        ? activePlan.filters
+        : undefined;
 
       try {
-        const result = await sendMessage(rollId, text, refIds, activeFilters);
+        const result = await sendMessage(rollId, text, refIds, activeFilters, refineMode && !refIds);
         setResultImageIds(result.images.map((img) => img.id));
         if (result.interpretedFilter) setActivePlan(result.interpretedFilter);
         if (result.followups?.length) setFollowups(result.followups);
@@ -83,7 +92,7 @@ export function useChatState({ rollId, initialImages }: Props) {
         setProcessing(false);
       }
     },
-    [rollId, activePlan],
+    [rollId, activePlan, refineMode],
   );
 
   const handleSend = useCallback(async () => {
@@ -118,6 +127,7 @@ export function useChatState({ rollId, initialImages }: Props) {
     setSelectedImageIds([]);
     setActivePlan(null);
     setFollowups([]);
+    setRefineMode(false);
   }, []);
 
   // openDarkroom derives navigation context from live state via refs so it
@@ -185,6 +195,8 @@ export function useChatState({ rollId, initialImages }: Props) {
     selectedImageIds,
     activePlan,
     followups,
+    refineMode,
+    setRefineMode,
     liveImages,
     setLiveImages,
     darkroom,
