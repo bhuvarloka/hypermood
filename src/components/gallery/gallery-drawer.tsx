@@ -347,7 +347,7 @@ function GalleryDetail({
       <div className="flex items-center gap-4">
         {/* Layout toggle */}
         <div className="flex border border-primary-200 text-sm">
-          {(['masonry', 'timeline'] as const).map((l) => (
+          {(['masonry', 'timeline', 'book', 'stage'] as const).map((l) => (
             <button
               key={l}
               onClick={() => setLayout(l)}
