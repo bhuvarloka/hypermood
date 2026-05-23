@@ -25,19 +25,17 @@ describe('buildClause — injection & allowlist', () => {
 })
 
 describe('buildClause — array-element contains', () => {
-  it('builds @> clause for objects[].label contains', () => {
+  it('builds EXISTS+ilike clause for objects[].label contains', () => {
     const f: QueryFilter = { field: 'objects[].label', operator: 'contains', value: 'cat' }
     const clause = buildClause(f)
-    expect(clause).toContain('@>')
-    expect(clause).toContain('"label":"cat"')
+    expect(clause).toContain('EXISTS')
+    expect(clause).toContain("ilike '%cat%'")
     expect(clause).toContain("'objects'")
   })
 
-  it('builds @> clause for people.descriptions[].clothing contains', () => {
+  it('returns null for dropped field people.descriptions[].clothing (not in allowlist)', () => {
     const f: QueryFilter = { field: 'people.descriptions[].clothing', operator: 'contains', value: 'blue jacket' }
-    const clause = buildClause(f)
-    expect(clause).toContain('@>')
-    expect(clause).toContain('"clothing":"blue jacket"')
+    expect(buildClause(f)).toBeNull()
   })
 })
 
@@ -63,12 +61,9 @@ describe('buildClause — scalar contains', () => {
     expect(clause).toContain('"sunset"')
   })
 
-  it('builds ilike clause for nested scalar field with contains', () => {
+  it('returns null for dropped field scene.environment (not in allowlist)', () => {
     const f: QueryFilter = { field: 'scene.environment', operator: 'contains', value: 'forest' }
-    const clause = buildClause(f)
-    expect(clause).toContain('ilike')
-    expect(clause).toContain('%forest%')
-    expect(clause).toContain("metadata->'scene'->>'environment'")
+    expect(buildClause(f)).toBeNull()
   })
 })
 
@@ -99,14 +94,14 @@ describe('buildClause — equality operators', () => {
 
 describe('buildClause — numeric operators', () => {
   it('builds ::numeric >= clause for gte', () => {
-    const f: QueryFilter = { field: 'technical.blur_score', operator: 'gte', value: 0.5 }
+    const f: QueryFilter = { field: 'quality_score', operator: 'gte', value: 0.5 }
     const clause = buildClause(f)
     expect(clause).toContain('::numeric >=')
     expect(clause).toContain('0.5')
   })
 
-  it('builds ::numeric <= clause for lte', () => {
-    const f: QueryFilter = { field: 'mood.energy_level', operator: 'lte', value: 0.3 }
+  it('builds ::numeric <= clause for lte on quality_score', () => {
+    const f: QueryFilter = { field: 'quality_score', operator: 'lte', value: 0.3 }
     expect(buildClause(f)).toContain('::numeric <=')
   })
 
@@ -241,13 +236,13 @@ describe('matchesFilter — numeric operators boundary', () => {
   })
 
   it('lte: equal value is true', () => {
-    const f: QueryFilter = { field: 'mood.energy_level', operator: 'lte', value: 0.3 }
-    expect(matchesFilter({ mood: { energy_level: 0.3 } }, f)).toBe(true)
+    const f: QueryFilter = { field: 'quality_score', operator: 'lte', value: 0.3 }
+    expect(matchesFilter({ quality_score: 0.3 }, f)).toBe(true)
   })
 
   it('lt: equal value is false', () => {
-    const f: QueryFilter = { field: 'mood.energy_level', operator: 'lt', value: 0.3 }
-    expect(matchesFilter({ mood: { energy_level: 0.3 } }, f)).toBe(false)
+    const f: QueryFilter = { field: 'quality_score', operator: 'lt', value: 0.3 }
+    expect(matchesFilter({ quality_score: 0.3 }, f)).toBe(false)
   })
 })
 
@@ -301,8 +296,8 @@ describe('matchesFilter — array-element filter', () => {
 
 describe('matchesFilter — numeric operator on missing field', () => {
   it('gte on a missing field returns false (Number(undefined) is NaN)', () => {
-    const f: QueryFilter = { field: 'mood.energy_level', operator: 'gte', value: 0.5 }
-    expect(matchesFilter({ mood: {} }, f)).toBe(false)
+    const f: QueryFilter = { field: 'people.count', operator: 'gte', value: 0.5 }
+    expect(matchesFilter({ people: {} }, f)).toBe(false)
   })
 
   it('lte on a missing field returns false', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { derivePreviewImages, GALLERY_INTENT_RE } from '@/components/chat/chat-interface.logic'
+import { derivePreviewImages } from '@/components/chat/chat-interface.logic'
 import type { Image as ImageRecord } from '@/types/domain'
 
 // Minimal stub that satisfies ImageRecord for testing
@@ -130,49 +130,5 @@ describe('derivePreviewImages — full roll fallback', () => {
       imageMap: new Map(),
     })
     expect(result).toEqual([])
-  })
-})
-
-// ---------------------------------------------------------------------------
-// GALLERY_INTENT_RE
-// ---------------------------------------------------------------------------
-
-describe('GALLERY_INTENT_RE', () => {
-  const matches = [
-    'show galleries',
-    'show my galleries',
-    'open gallery',
-    'open galleries',
-    'view galleries',
-    'see my gallery',
-    'list all galleries',
-    'show me my galleries',
-    'open the gallery',
-  ]
-
-  const nonMatches = [
-    'show my portraits',
-    'gallery saved',       // passive, no intent verb
-    'find portraits',
-    'open the darkroom',
-    'view images',
-    'save as gallery',     // "gallery" present but no intent verb preceding
-  ]
-
-  for (const text of matches) {
-    it(`matches: "${text}"`, () => {
-      expect(GALLERY_INTENT_RE.test(text)).toBe(true)
-    })
-  }
-
-  for (const text of nonMatches) {
-    it(`does NOT match: "${text}"`, () => {
-      expect(GALLERY_INTENT_RE.test(text)).toBe(false)
-    })
-  }
-
-  it('is case-insensitive', () => {
-    expect(GALLERY_INTENT_RE.test('SHOW GALLERIES')).toBe(true)
-    expect(GALLERY_INTENT_RE.test('Show My Galleries')).toBe(true)
   })
 })

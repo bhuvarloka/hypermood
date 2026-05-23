@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { createGallery } from '@/actions/galleries'
 import { getImageUrl } from '@/lib/imagekit/url'
+import { CopyLinkButton } from '@/components/ui/copy-link-button'
 import type { GalleryLayout, Image as ImageRecord } from '@/types/domain'
 
 type Props = {
@@ -18,8 +19,10 @@ export function PreviewPanel({ images, rollId, onClose, onGallerySaved }: Props)
   const [saveFormOpen, setSaveFormOpen] = useState(false)
   const [name, setName] = useState('')
   const [layout, setLayout] = useState<GalleryLayout>('masonry')
-  const [isPublic, setIsPublic] = useState(false)
+  // Galleries default to public so the copy-link flow has a shareable URL to offer.
+  const [isPublic, setIsPublic] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState<{ slug: string; isPublic: boolean } | null>(null)
 
   // Drag-to-dismiss: track live delta in a ref so callbacks never read stale state.
   // State is used only to apply the CSS transform for the visual follow.
@@ -81,7 +84,8 @@ export function PreviewPanel({ images, rollId, onClose, onGallerySaved }: Props)
         isPublic,
       )
       onGallerySaved(gallery.slug)
-      onClose()
+      // Stay open on success so the copy-link affordance is reachable in one click.
+      setSaved({ slug: gallery.slug, isPublic })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save gallery')
     } finally {
@@ -124,7 +128,20 @@ export function PreviewPanel({ images, rollId, onClose, onGallerySaved }: Props)
         <div className="px-8 pb-4 flex items-start justify-between gap-4 shrink-0">
           <span className="text-xl font-medium">{images.length} images</span>
 
-          {saveFormOpen ? (
+          {saved ? (
+            <div className="flex items-center gap-3 shrink-0 animate-bloom">
+              <span className="text-base font-medium">Saved</span>
+              {saved.isPublic ? (
+                <CopyLinkButton
+                  slug={saved.slug}
+                  className="bg-primary-900 text-white rounded-xl text-base font-medium px-4 py-2 animate-swiss hover:bg-primary-800"
+                  label="Copy link"
+                />
+              ) : (
+                <span className="text-sm text-primary-400">Private — make it public to share</span>
+              )}
+            </div>
+          ) : saveFormOpen ? (
             <SaveForm
               name={name}
               layout={layout}

@@ -18,46 +18,23 @@ subject (string): One-phrase description of what the image is fundamentally abou
 objects (array of objects):
   - objects[].label (string): what the object is — e.g., "cat", "laptop", "car"
   - objects[].prominence (string): "primary" | "secondary" | "background"
-  - objects[].position (string): "center" | "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right"
-  - objects[].attributes (string[]): visual attributes like "red", "wooden", "small"
 
 people.count (number): number of people visible
-people.descriptions[].position (string): position in frame — "center" | "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right"
-people.descriptions[].age_range (string): "child" | "teenager" | "young adult" | "middle-aged" | "elderly" | "unknown"
-people.descriptions[].gender_presentation (string): "masculine" | "feminine" | "ambiguous"
-people.descriptions[].clothing (string[]): clothing items worn — e.g., "red jacket", "suit", "white dress"
-people.descriptions[].activity (string): what they appear to be doing
-people.descriptions[].expression (string): facial expression
-
-relationships (string[]): spatial/contextual relationships between elements — e.g., "cat sitting on person's lap"
 
 colors.dominant (string[]): top hex color codes
 colors.palette_mood (string): "warm" | "cool" | "neutral" | "mixed" | "monochromatic" | "vibrant" | "muted" | "pastel" | "dark" | "high-contrast"
 colors.dominant_color_name (string): plain English name of most dominant color
 
-scene.environment (string): specific scene type — e.g., "beach", "office", "kitchen"
 scene.setting (string): "indoor" | "outdoor" | "mixed" | "not applicable"
 scene.time_of_day (string): "dawn" | "morning" | "midday" | "afternoon" | "golden hour" | "sunset" | "dusk" | "night" | "artificial lighting" | "unknown"
-scene.weather (string): "clear" | "cloudy" | "overcast" | "rainy" | "snowy" | "foggy" | "not applicable" | "unknown"
-
-mood.emotional_tone (string): e.g., "joyful", "serene", "tense", "melancholic"
-mood.energy_level (number 0–1): 0 = still/calm, 1 = dynamic/energetic
-mood.aesthetic_style (string): e.g., "minimalist", "cinematic", "vintage", "documentary"
 
 composition.framing (string): "extreme close-up" | "close-up" | "medium close-up" | "medium shot" | "medium wide" | "wide shot" | "extreme wide" | "overhead" | "birds-eye" | "flat lay"
-composition.focal_point (string): what the eye is drawn to
-composition.symmetry (string): "symmetric" | "asymmetric" | "radial" | "pattern/repetition"
-composition.depth (string): "shallow (blurred background)" | "deep (all in focus)" | "layered (foreground/midground/background)" | "flat (2D/graphic)"
 
-technical.blur_score (number 0–1): 0 = sharp, 1 = very blurry
-technical.exposure (string): "underexposed" | "well-exposed" | "overexposed" | "mixed/HDR"
-technical.noise_level (string): "clean" | "slight grain" | "noisy" | "very noisy"
 technical.is_screenshot (boolean)
 technical.is_graphic (boolean)
 technical.orientation (string): "landscape" | "portrait" | "square"
 
 quality_score (number 0–1): overall image quality — 0 = unusable, 1 = professional
-texture_material (string[]): materials visible — e.g., "wood", "glass", "concrete"
 
 text_content.has_text (boolean)
 text_content.text_strings (string[]): readable text found in the image
@@ -78,8 +55,7 @@ RULES:
 2. Combine both when the query has both a conceptual element AND precise criteria.
 3. For queries about specific objects, things, or items (e.g. "vase", "cat", "car"), generate TWO filters: one "contains" on "objects[].label" AND one "contains" on "tags". Also set semantic_search to the item name. This ensures partial label matches (e.g. "porcelain vase") and tag matches both find the image.
 4. For text in images, use "contains" on "text_content.text_strings".
-5. For clothing queries, use "contains" on "people.descriptions[].clothing".
-6. Keep filters minimal — only add what was explicitly or strongly implied by the query. Over-filtering excludes relevant results.
+5. Keep filters minimal — only add what was explicitly or strongly implied by the query. Over-filtering excludes relevant results.
 7. For queries about people being present ("portraits", "people", "faces", "someone", "a person"), use { field: "people.count", operator: "gte", value: 1 }. Only use "eq" with value 0 when the query explicitly asks for NO people ("without people", "no people", "empty scenes").
 8. limit: default 50, max 200. Increase for "show me all" style requests.
 9. For greetings, questions about the system, or completely non-search messages: return filters=[], semantic_search=null, sort=null, limit=50, and explain in clarification_note.

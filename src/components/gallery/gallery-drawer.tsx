@@ -10,6 +10,7 @@ import {
   reorderGalleryImages,
 } from '@/actions/galleries'
 import { getImageUrl } from '@/lib/imagekit/url'
+import { CopyLinkButton } from '@/components/ui/copy-link-button'
 import type { Gallery, GalleryLayout, GalleryListItem, Image as ImageRecord } from '@/types/domain'
 
 type View =
@@ -77,6 +78,18 @@ export function GalleryDrawer({ onClose, rollId, initialGalleryId }: Props) {
     )
   }, [])
 
+  // One-tap privacy toggle from the list — optimistic, reverts on failure.
+  const togglePublic = useCallback((gallery: GalleryListItem) => {
+    const next = !gallery.is_public
+    setGalleries((prev) => prev.map((g) => g.id === gallery.id ? { ...g, is_public: next } : g))
+    updateGallery(gallery.id, { is_public: next })
+      .then((updated) => handleUpdated(updated))
+      .catch((err) => {
+        console.error(err)
+        setGalleries((prev) => prev.map((g) => g.id === gallery.id ? { ...g, is_public: gallery.is_public } : g))
+      })
+  }, [handleUpdated])
+
   return (
     <>
       {/* Backdrop */}
@@ -118,6 +131,7 @@ export function GalleryDrawer({ onClose, rollId, initialGalleryId }: Props) {
             <GalleryList
               galleries={galleries}
               onOpen={openDetail}
+              onTogglePublic={togglePublic}
             />
           ) : (
             <GalleryDetail
@@ -140,9 +154,11 @@ export function GalleryDrawer({ onClose, rollId, initialGalleryId }: Props) {
 function GalleryList({
   galleries,
   onOpen,
+  onTogglePublic,
 }: {
   galleries: GalleryListItem[]
   onOpen: (g: GalleryListItem) => void
+  onTogglePublic: (g: GalleryListItem) => void
 }) {
   if (galleries.length === 0) {
     return (
@@ -153,7 +169,7 @@ function GalleryList({
   return (
     <ul>
       {galleries.map((g) => (
-        <GalleryRow key={g.id} gallery={g} onOpen={onOpen} />
+        <GalleryRow key={g.id} gallery={g} onOpen={onOpen} onTogglePublic={onTogglePublic} />
       ))}
     </ul>
   )
@@ -162,17 +178,20 @@ function GalleryList({
 function GalleryRow({
   gallery,
   onOpen,
+  onTogglePublic,
 }: {
   gallery: GalleryListItem
   onOpen: (g: GalleryListItem) => void
+  onTogglePublic: (g: GalleryListItem) => void
 }) {
+  // Row is a div, not a button, so the privacy toggle and copy link can nest as
+  // their own interactive controls without invalid button-in-button markup.
   return (
-    <li>
+    <li className="group/row flex items-center gap-4 px-6 py-3 animate-swiss hover:bg-primary-50">
       <button
         onClick={() => onOpen(gallery)}
-        className="w-full flex items-center gap-4 px-6 py-3 text-left animate-swiss hover:bg-primary-50"
+        className="flex flex-1 items-center gap-4 min-w-0 text-left"
       >
-        {/* 2×2 thumbnail mosaic */}
         <div className="grid grid-cols-2 gap-px w-12 h-12 shrink-0 bg-primary-100">
           {Array.from({ length: 4 }, (_, i) => {
             const key = gallery.thumbnail_keys[i]
@@ -194,42 +213,27 @@ function GalleryRow({
           <p className="text-lg truncate">{gallery.name}</p>
           <p className="text-sm tabular-nums text-primary-400">
             {gallery.image_count} {gallery.image_count === 1 ? 'image' : 'images'}
-            {' · '}
-            <span className={gallery.is_public ? 'text-semantic-info' : ''}>
-              {gallery.is_public ? 'public' : 'private'}
-            </span>
           </p>
         </div>
-
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="shrink-0 text-primary-200">
-          <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
       </button>
+
+      <div className="flex items-center gap-3 shrink-0">
+        {gallery.is_public && (
+          <span className="opacity-0 group-hover/row:opacity-100 animate-swiss">
+            <CopyLinkButton slug={gallery.slug} label="copy" />
+          </span>
+        )}
+        <button
+          onClick={() => onTogglePublic(gallery)}
+          className={`text-sm animate-swiss ${
+            gallery.is_public ? 'text-semantic-info hover:opacity-70' : 'text-primary-400 hover:text-primary-900'
+          }`}
+          aria-label={gallery.is_public ? 'Make private' : 'Make public'}
+        >
+          {gallery.is_public ? 'public' : 'private'}
+        </button>
+      </div>
     </li>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Copy button
-// ---------------------------------------------------------------------------
-
-function CopyButton({ slug }: { slug: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const copy = useCallback(() => {
-    navigator.clipboard.writeText(`${window.location.origin}/g/${slug}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [slug])
-
-  return (
-    <button
-      onClick={copy}
-      className="text-sm text-primary-400 animate-swiss hover:text-primary-900 shrink-0"
-      aria-label="Copy public link"
-    >
-      {copied ? 'copied!' : 'copy'}
-    </button>
   )
 }
 
@@ -357,10 +361,12 @@ function GalleryDetail({
           ))}
         </div>
 
-        {/* Public toggle */}
+        {/* Public toggle — aria-label states the action, not the current value,
+            so it never strict-matches the "Copy public link" control. */}
         <button
           onClick={togglePublic}
           disabled={saving}
+          aria-label={gallery.is_public ? 'Make private' : 'Make public'}
           className={`text-sm px-3 py-1 border animate-swiss ${
             gallery.is_public
               ? 'border-semantic-info text-semantic-info hover:bg-primary-50'
@@ -381,7 +387,7 @@ function GalleryDetail({
             >
               /g/{gallery.slug}
             </a>
-            <CopyButton slug={gallery.slug} />
+            <CopyLinkButton slug={gallery.slug} label="copy" />
           </div>
         )}
       </div>

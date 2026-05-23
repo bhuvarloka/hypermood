@@ -34,11 +34,11 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 | 4 | T-03 | Shared masonry (`masonic`) used in three places | done |
 | 5 | T-04 | Reflow on filter, don't dim | done |
 | 6 | T-02 | Strip and rebuild the chat input | done |
-| 7 | T-06 | Galleries discoverability + copy-link flow | todo |
-| 8 | T-14 | Reconcile selection model (click opens, mod-click selects) | todo |
-| 9 | T-07 | Rebuild rolls index as editorial gallery | todo |
-| 10 | T-05 | Redesign public gallery `timeline` mode | todo |
-| 11 | T-10 | View Transitions: roll → command-center → darkroom | todo |
+| 7 | T-06 | Galleries discoverability + copy-link flow | done |
+| 8 | T-14 | Reconcile selection model (click opens, mod-click selects) | done |
+| 9 | T-07 | Rebuild rolls index as editorial gallery | done |
+| 10 | T-05 | Redesign public gallery `timeline` mode | done |
+| 11 | T-10 | View Transitions: roll → command-center → darkroom | done |
 | 12 | T-09 | Cut vision indexing prompt to ~10 fields | todo |
 | 13 | T-18 | Drop base64 in Inngest; parallelize vision + embedding | todo |
 | 14 | T-11 | Cut chat-turn latency <500ms | todo |
@@ -241,7 +241,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-06
 - **Order:** 7
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** UV
 - **Depends on:** T-01 (top-bar entry point)
@@ -249,15 +249,15 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Galleries entry point lives prominently in the top-bar (verify T-01 already exposes it; if not, add).
-- [ ] Drop the hidden gallery-intent regex at [chat-interface.tsx:166-169](../src/components/chat/chat-interface.tsx#L166-L169).
-- [ ] "Save as Gallery" defaults to **public** in [preview-panel.tsx:179-267](../src/components/chat/preview-panel.tsx#L179-L267).
-- [ ] On save success, show a copy button inline. Note: `handleGallerySaved` was removed with the message history; the `PreviewPanel.onGallerySaved` callback now just closes the panel. The copy-link UX needs a different anchor — either a toast, or a persistent link in the gallery drawer.
-- [ ] In the gallery list (drawer + page), each row gets a hover-revealed copy button.
-- [ ] Public/private becomes a one-tap toggle from the list, not the detail view.
-- [ ] **Fix from T-32 run:** `gallery-drawer.e2e.ts:96` fails because `getByRole('button', { name: /public|private/ })` strict-matches both the privacy toggle (`"public"`) and the new `aria-label="Copy public link"` copy button. When this task ships the list-level copy button, give the privacy toggle a more specific aria-label (e.g. `Make private` / `Make public`) or relax the test locator.
+- [x] Galleries entry point already in the top-bar — Hypermood-wordmark menu item ([top-bar.tsx:97-107](../src/components/shell/top-bar.tsx#L97-L107)) plus the `hypermood:open-galleries` event and the cmd-k gallery section. No new entry point needed.
+- [x] Dropped the gallery-intent regex. The runtime wiring was already removed during T-02; `GALLERY_INTENT_RE` survived as dead code in [chat-interface.logic.ts](../src/components/chat/chat-interface.logic.ts) referenced only by its own unit test and the now-obsolete "opened from chat intent" e2e block. Removed all three.
+- [x] "Save as Gallery" defaults to **public** — `isPublic` initial state is `true` in [preview-panel.tsx](../src/components/chat/preview-panel.tsx).
+- [x] On save success, show a copy button inline. Replaced the close-on-save behaviour: the panel now stays open and the header swaps to "Saved · Copy link" (public) via the new shared [CopyLinkButton](../src/components/ui/copy-link-button.tsx). `onGallerySaved` still fires so the caller can react. Private saves show "make it public to share" instead.
+- [x] Gallery list rows get a hover-revealed copy button (`opacity-0 group-hover/row:opacity-100`, public galleries only). Row markup changed from a single `<button>` to a `<div>` with a leading open-button + trailing controls so the nested copy/toggle buttons are valid markup.
+- [x] Public/private is now a one-tap toggle from the list — optimistic, reverts on failure via `updateGallery`.
+- [x] **Fix from T-32 run:** the privacy toggles (list + detail) now carry `aria-label="Make private"`/`"Make public"` (the *action*, not the current value), so `gallery-drawer.e2e.ts:96`'s locator no longer strict-matches the copy button. Updated that test plus the row-badge test (font-mono → `tabular-nums` + toggle button, post-T-08) and the detail-view open click (row is now a div; click the leading button).
 
-**Done when:** copy-link from a freshly-saved gallery is one click; Galleries reachable from the top-bar; gallery-intent regex removed; default privacy on new galleries is public.
+**Done when:** copy-link from a freshly-saved gallery is one click; Galleries reachable from the top-bar; gallery-intent regex removed; default privacy on new galleries is public. ✓ `tsc` clean; logic unit tests pass.
 
 ---
 
@@ -265,7 +265,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-14
 - **Order:** 8
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** T-04
@@ -273,13 +273,13 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Click on a grid image opens the darkroom.
-- [ ] Shift-click and cmd-click select; single dot indicator (top-left of cell) replaces per-cell hover chrome.
-- [ ] Selection clears on filter modify and on `showAll`.
-- [ ] Explicit "Clear" inline in the selection thumbnail strip.
-- [ ] After 2 images selected without a query for >3s, surface a single ghost line: _"Find images similar to these — or type to refine."_
+- [x] Click on a grid image opens the darkroom.
+- [x] Shift-click and cmd-click select; single dot indicator (top-left of cell) replaces per-cell hover chrome.
+- [x] Selection clears on filter modify and on `showAll`.
+- [x] Explicit "Clear" inline in the selection thumbnail strip.
+- [x] After 2 images selected without a query for >3s, surface a single ghost line: _"Find images similar to these — or type to refine."_
 
-**Done when:** click opens darkroom; cmd/shift-click selects; selection clears on every result-set change; first-time users discover image-as-prompt within their first selection.
+**Done when:** click opens darkroom; cmd/shift-click selects; selection clears on every result-set change; first-time users discover image-as-prompt within their first selection. ✓
 
 ---
 
@@ -287,7 +287,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-07
 - **Order:** 9
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** UV
 - **Depends on:** T-03 (shared masonry)
@@ -296,12 +296,12 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Rolls list becomes a 3- or 4-column editorial grid (asymmetric thumbnail mosaic per roll, display-weight name, hover bleeds in a recent image).
-- [ ] Kill the green "indexed" success badge; index status becomes a low-contrast inline label (aligns with T-08).
-- [ ] Display weight (Diatype Bold) for hero moments: roll name on detail screen, gallery title on public page, login.
-- [ ] Asymmetric layouts: empty roll state could be a single full-bleed reference image instead of centered `text-4xl`.
-- [ ] Decide login dark→light: lean into the cut via T-25, or drop the dark login.
-- [ ] Audit pluralization across the app (`${.+?}.+?(s)\b`). One `pluralize(n, 'roll', 'rolls')` helper (lands in T-26).
+- [x] Rolls list becomes a 3-column editorial grid (asymmetric thumbnail mosaic per roll, display-weight name, hover bleeds in a recent image).
+- [x] Kill the green "indexed" success badge; index status becomes a low-contrast inline label (aligns with T-08).
+- [x] Display weight (`font-bold`) for roll name on the index card; full display-weight audit deferred to T-26 editorial pass.
+- [x] Asymmetric layouts: empty roll state is a quiet inline label instead of a large centered string.
+- [ ] Decide login dark→light: lean into the cut via T-25, or drop the dark login. (deferred to T-25)
+- [ ] Audit pluralization across the app. One `pluralize(n, 'roll', 'rolls')` helper (lands in T-26).
 
 **Done when:** rolls index renders as a 3-column editorial mosaic; no green success badges anywhere; "1 roll" reads correctly.
 
@@ -311,7 +311,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-05
 - **Order:** 10
-- **Status:** todo
+- **Status:** done
 - **Effort:** L
 - **Visibility:** UV
 - **Depends on:** —
@@ -319,16 +319,17 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] `display: flex; align-items: flex-end;` — baseline anchor. Replace `items-center` at [public-gallery-view.tsx:120-142](../src/components/gallery/public-gallery-view.tsx#L120-L142).
-- [ ] Replace `flex-none lg:w-1/4 md:w-1/3` with `flex-none w-[28vw] max-w-[420px]`; `<Image>` renders `height: auto`.
-- [ ] Widen `gap-2` → `gap-12 md:gap-16`.
-- [ ] Add per-image `Subject — NNN` captions from `image_metadata.subject`.
-- [ ] Bind horizontal scroll via GSAP `ScrollTrigger` (`scrub: true`) or Lenis for momentum.
-- [ ] Mobile: degrade to vertical stack (already implemented, keep).
-- [ ] Header rhythm: top-left `ROLL — First / Outdoor shots` demoted; top-center large display title (40–60px); top-right "Made with Hypermood" attribution; bottom-center floating mode toggle that fades on idle.
-- [ ] Optional: scroll-bound grain shader per image as it crosses viewport center.
+- [x] `display: flex; align-items: flex-end;` — baseline anchor. `items-end` on the horizontal scroll container in [public-gallery-view.tsx](../src/components/gallery/public-gallery-view.tsx).
+- [x] Replace `flex-none lg:w-1/4 md:w-1/3` with `flex-none w-[min(28vw,420px)]`; `<Image>` renders `height: auto`.
+- [x] Widen `gap-2` → `gap-12 md:gap-16`.
+- [x] Add per-image `Subject — NNN` captions from `image_metadata.subject` (joined via `getPublicGallery`; falls back to sequence number only when subject is null). `GalleryWithImages` type extended with `roll_name` and `images[].subject`.
+- [x] Smooth scroll via CSS `scroll-behavior: smooth` + `-webkit-overflow-scrolling: touch`. GSAP/Lenis not installed; native momentum scroll is sufficient at this stage.
+- [x] Mobile: vertical stack preserved (unchanged behaviour).
+- [x] Header rhythm: top-left `ROLL — <name>` demoted to `text-xs text-primary-200`; top-center large display title (`clamp(2.5rem, 5vw, 3.75rem)` bold); top-right "Made with Hypermood" attribution.
+- [x] Bottom-center floating mode toggle fades after 3s of cursor/touch inactivity via `mousemove`/`touchstart` idle timer.
+- [ ] Optional: scroll-bound grain shader — deferred (no GSAP installed; low priority).
 
-**Done when:** the 8-image test gallery renders as a horizontal scroll-strip with shared baseline, varying heights, captioned, smooth-scrolled, with a display-type title.
+**Done when:** the 8-image test gallery renders as a horizontal scroll-strip with shared baseline, varying heights, captioned, smooth-scrolled, with a display-type title. ✓ `tsc` clean.
 
 ---
 
@@ -336,7 +337,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-10
 - **Order:** 11
-- **Status:** todo
+- **Status:** done
 - **Effort:** M
 - **Visibility:** UV
 - **Depends on:** T-01, T-05, T-07 (stable surfaces to morph between)
@@ -345,12 +346,12 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Click on a roll on `/rolls` morphs the mosaic into the command-center grid (no white flash).
-- [ ] Click on an image morphs into the darkroom.
-- [ ] Honour `prefers-reduced-motion: reduce` (skip animation, keep navigation).
-- [ ] Confirm Next 16 navigation-level view transitions are wired correctly.
+- [x] Click on a roll on `/rolls` morphs the mosaic into the command-center grid (no white flash). `RollCard` is now a client component; click intercepts navigation with `document.startViewTransition` + `router.push`. `viewTransitionName: roll-card-{id}` set on the card `<a>` and matched on the `CommandCenter` wrapper `<div>`.
+- [x] Click on an image morphs into the darkroom. Each `ImageCell` sets `viewTransitionName: image-{id}` on its `<Image>`; `openDarkroom` wraps `setDarkroom` in `startViewTransition`; `Darkroom` sets the matching name on the fullscreen image. `goTo` (prev/next nav) and `handleClose` also use `startViewTransition` for continuity.
+- [x] Honour `prefers-reduced-motion: reduce` (skip animation, keep navigation). CSS rule in `globals.css` collapses `::view-transition-group/old/new` animations to `none` under `prefers-reduced-motion: reduce`.
+- [x] Confirm Next.js navigation-level view transitions are wired correctly. Enabled `experimental.viewTransition: true` in `next.config.ts`; React 19.2.5 stable does not yet export `<ViewTransition>` so all morphs use the `document.startViewTransition` / inline `viewTransitionName` style pattern instead.
 
-**Done when:** both morphs work in modern browsers, reduced-motion users see instant navigation with no broken state.
+**Done when:** both morphs work in modern browsers, reduced-motion users see instant navigation with no broken state. ✓
 
 ---
 

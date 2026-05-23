@@ -84,30 +84,23 @@ describe('validateMetadata', () => {
 
   it('filters out objects with empty label', () => {
     const result = validateMetadata({
-      objects: [{ label: '', prominence: 'primary', position: 'center', attributes: [] }],
+      objects: [{ label: '', prominence: 'primary' }],
     })
     expect(result.objects).toHaveLength(0)
   })
 
   it('filters out objects with null label', () => {
     const result = validateMetadata({
-      objects: [{ label: null, prominence: 'primary', position: 'center', attributes: [] }],
+      objects: [{ label: null, prominence: 'primary' }],
     })
     expect(result.objects).toHaveLength(0)
   })
 
   it('falls back prominence to "secondary" for invalid value', () => {
     const result = validateMetadata({
-      objects: [{ label: 'cat', prominence: 'dominant', position: 'center', attributes: [] }],
+      objects: [{ label: 'cat', prominence: 'dominant' }],
     })
     expect(result.objects[0].prominence).toBe('secondary')
-  })
-
-  it('falls back position to "center" for invalid value', () => {
-    const result = validateMetadata({
-      objects: [{ label: 'cat', prominence: 'primary', position: 'floating', attributes: [] }],
-    })
-    expect(result.objects[0].position).toBe('center')
   })
 
   it('lowercases tags', () => {
@@ -120,26 +113,6 @@ describe('validateMetadata', () => {
     expect(result.tags).toEqual(['beach', 'sunset'])
   })
 
-  it('clamps energy_level below 0 to 0', () => {
-    const result = validateMetadata({ mood: { energy_level: -0.5, emotional_tone: 'calm', aesthetic_style: 'minimal' } })
-    expect(result.mood.energy_level).toBe(0)
-  })
-
-  it('clamps energy_level above 1 to 1', () => {
-    const result = validateMetadata({ mood: { energy_level: 1.5, emotional_tone: 'energetic', aesthetic_style: 'editorial' } })
-    expect(result.mood.energy_level).toBe(1)
-  })
-
-  it('falls back energy_level for NaN', () => {
-    const result = validateMetadata({ mood: { energy_level: NaN } })
-    expect(result.mood.energy_level).toBe(DEFAULTS.mood.energy_level)
-  })
-
-  it('falls back energy_level for Infinity', () => {
-    const result = validateMetadata({ mood: { energy_level: Infinity } })
-    expect(result.mood.energy_level).toBe(DEFAULTS.mood.energy_level)
-  })
-
   it('clamps quality_score above 1 to 1', () => {
     const result = validateMetadata({ quality_score: 2.0 })
     expect(result.quality_score).toBe(1.0)
@@ -150,37 +123,18 @@ describe('validateMetadata', () => {
     expect(result.quality_score).toBe(0.0)
   })
 
-  it('clamps blur_score to 0–1 range', () => {
-    expect(validateMetadata({ technical: { blur_score: 5.0 } }).technical.blur_score).toBe(1.0)
-    expect(validateMetadata({ technical: { blur_score: -1.0 } }).technical.blur_score).toBe(0.0)
-  })
-
-  it('falls back people.count to descriptions.length when count is not a number', () => {
-    const result = validateMetadata({
-      people: {
-        count: 'two',
-        descriptions: [
-          { position: 'center', age_range: 'adult', gender_presentation: 'ambiguous', clothing: [], activity: 'walking', expression: 'neutral' },
-        ],
-      },
-    })
-    expect(result.people.count).toBe(1)
-  })
-
-  it('preserves people.count when it is a number, regardless of descriptions length', () => {
-    const result = validateMetadata({
-      people: {
-        count: 5,
-        descriptions: [
-          { position: 'left', age_range: 'young adult', gender_presentation: 'feminine', clothing: [], activity: 'sitting', expression: 'smiling' },
-        ],
-      },
-    })
+  it('preserves people.count when it is a number', () => {
+    const result = validateMetadata({ people: { count: 5 } })
     expect(result.people.count).toBe(5)
   })
 
   it('preserves people.count: 0 (zero is a valid number)', () => {
-    const result = validateMetadata({ people: { count: 0, descriptions: [] } })
+    const result = validateMetadata({ people: { count: 0 } })
+    expect(result.people.count).toBe(0)
+  })
+
+  it('falls back people.count to 0 when count is not a number', () => {
+    const result = validateMetadata({ people: { count: 'two' } })
     expect(result.people.count).toBe(0)
   })
 
@@ -230,48 +184,25 @@ describe('validateMetadata', () => {
 
   it('scene: null scene uses DEFAULTS for all scene fields', () => {
     const result = validateMetadata({ scene: null })
-    expect(result.scene.environment).toBe(DEFAULTS.scene.environment)
     expect(result.scene.setting).toBe(DEFAULTS.scene.setting)
     expect(result.scene.time_of_day).toBe(DEFAULTS.scene.time_of_day)
-    expect(result.scene.weather).toBe(DEFAULTS.scene.weather)
   })
 
-  it('composition: null composition uses DEFAULTS for all composition fields', () => {
+  it('composition: null composition uses DEFAULTS for framing', () => {
     const result = validateMetadata({ composition: null })
     expect(result.composition.framing).toBe(DEFAULTS.composition.framing)
-    expect(result.composition.focal_point).toBe(DEFAULTS.composition.focal_point)
-  })
-
-  it('people: descriptions as a non-array falls back to empty descriptions', () => {
-    const result = validateMetadata({ people: { count: 2, descriptions: 'two people' } })
-    expect(result.people.descriptions).toEqual([])
-    // count is a valid number so it is preserved, not replaced by descriptions.length
-    expect(result.people.count).toBe(2)
-  })
-
-  it('validatePerson: clothing with non-string elements are filtered', () => {
-    const result = validateMetadata({
-      people: {
-        count: 1,
-        descriptions: [{ position: 'center', age_range: 'adult', gender_presentation: 'ambiguous', clothing: ['jeans', 42, null], activity: 'walking', expression: 'neutral' }],
-      },
-    })
-    expect(result.people.descriptions[0].clothing).toEqual(['jeans'])
   })
 
   it('passes a full valid payload through correctly', () => {
     const payload = {
       subject: 'dog on a beach',
-      objects: [{ label: 'dog', prominence: 'primary', position: 'center', attributes: ['golden', 'fluffy'] }],
-      people: { count: 0, descriptions: [] },
-      relationships: ['dog running along shoreline'],
+      objects: [{ label: 'dog', prominence: 'primary' }],
+      people: { count: 0 },
       colors: { dominant: ['#f5c842'], palette_mood: 'warm', dominant_color_name: 'yellow' },
-      scene: { environment: 'beach', setting: 'outdoor', time_of_day: 'golden hour', weather: 'clear' },
-      mood: { emotional_tone: 'joyful', energy_level: 0.8, aesthetic_style: 'documentary' },
-      composition: { framing: 'wide shot', focal_point: 'dog', symmetry: 'asymmetric', depth: 'deep (all in focus)' },
-      technical: { blur_score: 0.1, exposure: 'well-exposed', noise_level: 'clean', is_screenshot: false, is_graphic: false, orientation: 'landscape' },
+      scene: { setting: 'outdoor', time_of_day: 'golden hour' },
+      composition: { framing: 'wide shot' },
+      technical: { is_screenshot: false, is_graphic: false, orientation: 'landscape' },
       quality_score: 0.85,
-      texture_material: ['sand', 'water/reflective'],
       text_content: { has_text: false, text_strings: [], text_role: 'none' },
       description: 'A golden retriever runs along a sandy beach at golden hour.',
       tags: ['dog', 'beach', 'golden hour', 'outdoor'],
@@ -279,7 +210,6 @@ describe('validateMetadata', () => {
     const result = validateMetadata(payload)
     expect(result.subject).toBe('dog on a beach')
     expect(result.objects[0].label).toBe('dog')
-    expect(result.mood.energy_level).toBe(0.8)
     expect(result.quality_score).toBe(0.85)
     expect(result.tags).toEqual(['dog', 'beach', 'golden hour', 'outdoor'])
     expect(result.scene.setting).toBe('outdoor')

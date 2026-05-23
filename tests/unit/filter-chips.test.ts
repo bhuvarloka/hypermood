@@ -33,14 +33,14 @@ describe('formatChipLabel — category-prefixed fields', () => {
       .toBe('color: turquoise')
   })
 
-  it('uses "place" prefix for scene.environment', () => {
-    expect(formatChipLabel({ field: 'scene.environment', operator: 'eq', value: 'studio' }))
-      .toBe('place: studio')
+  it('uses "time" prefix for scene.time_of_day', () => {
+    expect(formatChipLabel({ field: 'scene.time_of_day', operator: 'eq', value: 'golden hour' }))
+      .toBe('time: golden hour')
   })
 
-  it('uses "people" prefix for people.count', () => {
+  it('uses "no people" for people.count eq 0', () => {
     expect(formatChipLabel({ field: 'people.count', operator: 'eq', value: 0 }))
-      .toBe('people: 0')
+      .toBe('no people')
   })
 
   it('uses "framing" prefix for composition.framing', () => {

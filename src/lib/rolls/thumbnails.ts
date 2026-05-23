@@ -11,7 +11,7 @@ export const getRollThumbnails = cache(async function getRollThumbnails(rollIds:
 
   const { data, error } = await supabase.rpc('get_roll_thumbnails', {
     p_roll_ids: rollIds,
-    p_limit: 4,
+    p_limit: 5,
   } as never)
 
   if (error || !data) return {}

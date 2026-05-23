@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // Enables unauthorized() and forbidden() for auth interrupts in Server Components.
     authInterrupts: true,
+    // Enables React's ViewTransition component + deeper Next.js integration.
+    viewTransition: true,
   },
   images: {
     remotePatterns: [

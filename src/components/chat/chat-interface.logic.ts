@@ -1,16 +1,6 @@
 import type { Image as ImageRecord } from '@/types/domain'
 
 /**
- * Regular expression that matches user messages intending to open the gallery
- * manager drawer rather than query the image roll.
- *
- * Matches "gallery" (singular) or "galleries" (plural).
- * Note: `galleries?` would match "gallerie" or "galleries" but NOT "gallery".
- * The correct pattern is `gallery(?:s|\b)` to match both forms.
- */
-export const GALLERY_INTENT_RE = /\b(show|open|view|see|list)\b.*\bgaller(?:y|ies)\b/i
-
-/**
  * Derives the ordered list of images to show in PreviewPanel / the selection
  * strip, following the priority rules:
  *

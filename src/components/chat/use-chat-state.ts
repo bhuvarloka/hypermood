@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   sendMessage,
   getLastRollState,
@@ -32,6 +32,14 @@ export function useChatState({ rollId, initialImages }: Props) {
     index: number;
   } | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectionIdlePrompt, setSelectionIdlePrompt] = useState(false);
+  const selectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Stable refs so openDarkroom doesn't stale-close over state
+  const liveImagesRef = useRef(liveImages);
+  liveImagesRef.current = liveImages;
+  const resultImageIdsRef = useRef(resultImageIds);
+  resultImageIdsRef.current = resultImageIds;
 
   // Restore last result set + active plan from the most recent assistant message
   useEffect(() => {
@@ -42,6 +50,19 @@ export function useChatState({ rollId, initialImages }: Props) {
       })
       .catch(console.error);
   }, [rollId]);
+
+  // Show a ghost prompt when ≥2 images are selected and idle for >3s
+  useEffect(() => {
+    if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
+    if (selectedImageIds.length >= 2) {
+      selectionTimerRef.current = setTimeout(() => setSelectionIdlePrompt(true), 3000);
+    } else {
+      setSelectionIdlePrompt((prev) => prev ? false : prev);
+    }
+    return () => {
+      if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
+    };
+  }, [selectedImageIds]);
 
   const submitMessage = useCallback(
     async (text: string, refIds?: string[], freshStart = false) => {
@@ -99,20 +120,34 @@ export function useChatState({ rollId, initialImages }: Props) {
     setFollowups([]);
   }, []);
 
-  const openDarkroom = useCallback(
-    (imageId: string, contextImages: ImageRecord[]) => {
-      const index = contextImages.findIndex((img) => img.id === imageId);
-      if (index === -1) return;
-      setDarkroom({ images: contextImages, index });
-    },
-    [],
-  );
+  // openDarkroom derives navigation context from live state via refs so it
+  // doesn't stale-close over resultImageIds / liveImages.
+  const openDarkroom = useCallback((imageId: string) => {
+    const currentResultIds = resultImageIdsRef.current;
+    const allImages = liveImagesRef.current;
+    const contextImages =
+      currentResultIds !== null
+        ? allImages.filter((img) => currentResultIds.includes(img.id))
+        : allImages;
+    const index = contextImages.findIndex((img) => img.id === imageId);
+    if (index === -1) return;
+
+    const update = () => setDarkroom({ images: contextImages, index });
+
+    // Morph the clicked grid image into the darkroom via View Transitions when supported.
+    if ('startViewTransition' in document) {
+      document.startViewTransition(update);
+    } else {
+      update();
+    }
+  }, []);
 
   const handleFilterModify = useCallback(
     async (plan: QueryPlan, modifications: FilterMod[]) => {
       if (sending) return;
       setSending(true);
       setProcessing(true);
+      setSelectedImageIds([]);
       try {
         const result = await rerunWithModifiedFilters(rollId, plan, modifications);
         setResultImageIds(result.images.map((img) => img.id));
@@ -165,5 +200,6 @@ export function useChatState({ rollId, initialImages }: Props) {
     showAll,
     openDarkroom,
     handleFilterModify,
+    selectionIdlePrompt,
   };
 }

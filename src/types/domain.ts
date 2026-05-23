@@ -36,7 +36,8 @@ export type ImageWithMetadata = Image & {
 }
 
 export type GalleryWithImages = Gallery & {
-  images: Image[]
+  images: (Image & { subject?: string | null })[]
+  roll_name?: string | null
 }
 
 export type GalleryListItem = Gallery & {
@@ -55,41 +56,9 @@ export type ChatMessageWithResults = ChatMessage & {
 
 export type ObjectProminence = 'primary' | 'secondary' | 'background'
 
-export type Position =
-  | 'center'
-  | 'left'
-  | 'right'
-  | 'top'
-  | 'bottom'
-  | 'top-left'
-  | 'top-right'
-  | 'bottom-left'
-  | 'bottom-right'
-
 export type DetectedObject = {
   label: string
   prominence: ObjectProminence
-  position: Position
-  attributes: string[]
-}
-
-export type AgeRange =
-  | 'child'
-  | 'teenager'
-  | 'young adult'
-  | 'middle-aged'
-  | 'elderly'
-  | 'unknown'
-
-export type GenderPresentation = 'masculine' | 'feminine' | 'ambiguous'
-
-export type PersonDescription = {
-  position: Position
-  age_range: AgeRange
-  gender_presentation: GenderPresentation
-  clothing: string[]
-  activity: string
-  expression: string
 }
 
 export type PaletteMood =
@@ -118,16 +87,6 @@ export type TimeOfDay =
   | 'artificial lighting'
   | 'unknown'
 
-export type Weather =
-  | 'clear'
-  | 'cloudy'
-  | 'overcast'
-  | 'rainy'
-  | 'snowy'
-  | 'foggy'
-  | 'not applicable'
-  | 'unknown'
-
 export type Framing =
   | 'extreme close-up'
   | 'close-up'
@@ -139,18 +98,6 @@ export type Framing =
   | 'overhead'
   | 'birds-eye'
   | 'flat lay'
-
-export type Symmetry = 'symmetric' | 'asymmetric' | 'radial' | 'pattern/repetition'
-
-export type Depth =
-  | 'shallow (blurred background)'
-  | 'deep (all in focus)'
-  | 'layered (foreground/midground/background)'
-  | 'flat (2D/graphic)'
-
-export type Exposure = 'underexposed' | 'well-exposed' | 'overexposed' | 'mixed/HDR'
-
-export type NoiseLevel = 'clean' | 'slight grain' | 'noisy' | 'very noisy'
 
 export type Orientation = 'landscape' | 'portrait' | 'square'
 
@@ -168,41 +115,25 @@ export type BaseLayerMetadata = {
   objects: DetectedObject[]
   people: {
     count: number
-    descriptions: PersonDescription[]
   }
-  relationships: string[]
   colors: {
     dominant: string[]
     palette_mood: PaletteMood
     dominant_color_name: string
   }
   scene: {
-    environment: string
     setting: Setting
     time_of_day: TimeOfDay
-    weather: Weather
-  }
-  mood: {
-    emotional_tone: string
-    energy_level: number
-    aesthetic_style: string
   }
   composition: {
     framing: Framing
-    focal_point: string
-    symmetry: Symmetry
-    depth: Depth
   }
   technical: {
-    blur_score: number
-    exposure: Exposure
-    noise_level: NoiseLevel
     is_screenshot: boolean
     is_graphic: boolean
     orientation: Orientation
   }
   quality_score: number
-  texture_material: string[]
   text_content: {
     has_text: boolean
     text_strings: string[]

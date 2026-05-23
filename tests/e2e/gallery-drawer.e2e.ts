@@ -53,12 +53,12 @@ test.describe('Gallery Drawer — list view', () => {
     if (count === 0) { test.skip(); return }
 
     const firstRow = rows.first()
-    // Name should be visible
+    // Name
     await expect(firstRow.locator('p.text-lg')).toBeVisible()
-    // Count in mono font
-    await expect(firstRow.locator('p.font-mono')).toContainText(/\d+ image/)
-    // public or private badge
-    await expect(firstRow.locator('p.font-mono')).toContainText(/public|private/)
+    // Image count
+    await expect(firstRow.locator('p.tabular-nums')).toContainText(/\d+ image/)
+    // Privacy toggle exposes its action ("Make private" when public, "Make public" when private)
+    await expect(firstRow.getByRole('button', { name: /Make (private|public)/ })).toBeVisible()
   })
 
   test('gallery row shows a 2×2 thumbnail mosaic', async ({ page }) => {
@@ -75,7 +75,8 @@ test.describe('Gallery Drawer — detail view', () => {
     const rows = page.locator('ul li')
     const count = await rows.count()
     if (count === 0) { test.skip(); return }
-    await rows.first().click()
+    // The open affordance is the row's leading button (mosaic + name), not the <li> itself.
+    await rows.first().locator('button').first().click()
     await page.waitForTimeout(300)
   })
 
@@ -94,7 +95,7 @@ test.describe('Gallery Drawer — detail view', () => {
   })
 
   test('detail view shows the public/private toggle', async ({ page }) => {
-    const toggle = page.getByRole('button', { name: /public|private/ })
+    const toggle = page.getByRole('button', { name: /Make (private|public)/ })
     await expect(toggle).toBeVisible()
   })
 
@@ -129,22 +130,5 @@ test.describe('Gallery Drawer — detail view', () => {
     await firstThumb.getByRole('button', { name: 'Remove image' }).click()
     // Count should decrease
     await expect(imageGrid.locator('> div')).toHaveCount(initialCount - 1, { timeout: 5000 })
-  })
-})
-
-test.describe('Gallery Drawer — opened from chat intent', () => {
-  test('typing "show my galleries" in chat opens the drawer', async ({ page }) => {
-    const rollId = process.env.TEST_ROLL_ID
-    if (!rollId) { test.skip(); return }
-
-    await page.goto(`/rolls/${rollId}`)
-    await page.waitForLoadState('networkidle')
-    const textarea = page.getByPlaceholder('Ask about this roll…')
-    await textarea.fill('show my galleries')
-    await textarea.press('Enter')
-    // Gallery drawer should open
-    await expect(page.locator('.fixed.inset-y-0.right-0')).toBeVisible({ timeout: 3000 })
-    // No AI processing should have happened — no "Interpreting query" line
-    await expect(page.getByText('Interpreting query...')).not.toBeVisible()
   })
 })

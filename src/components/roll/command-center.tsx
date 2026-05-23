@@ -14,13 +14,16 @@ export function CommandCenter({ rollId, roll, initialImages }: Props) {
     : []
 
   return (
-    <AmbientUpload rollId={rollId}>
-      <ChatInterface
-        rollId={rollId}
-        rollName={roll.name}
-        initialImages={initialImages}
-        rollSuggestions={rollSuggestions}
-      />
-    </AmbientUpload>
+    // Matching name on the receiving end allows the roll card to morph into this surface.
+    <div style={{ viewTransitionName: `roll-card-${rollId}` }}>
+      <AmbientUpload rollId={rollId}>
+        <ChatInterface
+          rollId={rollId}
+          rollName={roll.name}
+          initialImages={initialImages}
+          rollSuggestions={rollSuggestions}
+        />
+      </AmbientUpload>
+    </div>
   )
 }

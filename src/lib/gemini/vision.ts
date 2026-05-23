@@ -16,29 +16,13 @@ const USER_PROMPT = `Analyze this image and return a JSON object with exactly th
   "objects": [
     {
       "label": "string — what the object is",
-      "prominence": "'primary' | 'secondary' | 'background'",
-      "position": "'center' | 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'",
-      "attributes": ["notable visual attributes — color, size, state, texture"]
+      "prominence": "'primary' | 'secondary' | 'background'"
     }
   ],
 
   "people": {
-    "count": 0,
-    "descriptions": [
-      {
-        "position": "same position values as objects",
-        "age_range": "'child' | 'teenager' | 'young adult' | 'middle-aged' | 'elderly' | 'unknown'",
-        "gender_presentation": "'masculine' | 'feminine' | 'ambiguous'",
-        "clothing": ["visible clothing items with colors — e.g., 'blue denim jacket', 'white t-shirt'"],
-        "activity": "what they appear to be doing",
-        "expression": "'smiling' | 'neutral' | 'laughing' | 'serious' | 'focused' | 'not visible' | etc."
-      }
-    ]
+    "count": 0
   },
-
-  "relationships": [
-    "Natural language descriptions of spatial and contextual relationships between key elements. One string per relationship. e.g., 'woman standing next to a red car', 'cat sitting on person\\'s lap', 'text overlaid on sunset background', 'child holding adult\\'s hand', 'laptop placed on wooden desk near window'. 3-8 relationships for complex scenes, 1-2 for simple ones. Empty array only if the image contains a single isolated element."
-  ],
 
   "colors": {
     "dominant": ["top 3-5 hex codes from the image — e.g., '#2B4A7C', '#F5E6D3'"],
@@ -47,37 +31,21 @@ const USER_PROMPT = `Analyze this image and return a JSON object with exactly th
   },
 
   "scene": {
-    "environment": "specific scene type — e.g., 'beach', 'office', 'kitchen', 'city street', 'laboratory', 'abstract', 'digital/screenshot'",
     "setting": "'indoor' | 'outdoor' | 'mixed' | 'not applicable'",
-    "time_of_day": "'dawn' | 'morning' | 'midday' | 'afternoon' | 'golden hour' | 'sunset' | 'dusk' | 'night' | 'artificial lighting' | 'unknown'",
-    "weather": "'clear' | 'cloudy' | 'overcast' | 'rainy' | 'snowy' | 'foggy' | 'not applicable' | 'unknown'"
-  },
-
-  "mood": {
-    "emotional_tone": "dominant emotional quality — e.g., 'joyful', 'serene', 'tense', 'melancholic', 'energetic', 'mysterious', 'clinical', 'neutral'",
-    "energy_level": 0.5,
-    "aesthetic_style": "'minimalist' | 'brutalist' | 'vintage' | 'editorial' | 'documentary' | 'cinematic' | 'flat design' | 'organic' | 'industrial' | 'none' | etc."
+    "time_of_day": "'dawn' | 'morning' | 'midday' | 'afternoon' | 'golden hour' | 'sunset' | 'dusk' | 'night' | 'artificial lighting' | 'unknown'"
   },
 
   "composition": {
-    "framing": "'extreme close-up' | 'close-up' | 'medium close-up' | 'medium shot' | 'medium wide' | 'wide shot' | 'extreme wide' | 'overhead' | 'birds-eye' | 'flat lay'",
-    "focal_point": "what the eye is drawn to first",
-    "symmetry": "'symmetric' | 'asymmetric' | 'radial' | 'pattern/repetition'",
-    "depth": "'shallow (blurred background)' | 'deep (all in focus)' | 'layered (foreground/midground/background)' | 'flat (2D/graphic)'"
+    "framing": "'extreme close-up' | 'close-up' | 'medium close-up' | 'medium shot' | 'medium wide' | 'wide shot' | 'extreme wide' | 'overhead' | 'birds-eye' | 'flat lay'"
   },
 
   "technical": {
-    "blur_score": 0.0,
-    "exposure": "'underexposed' | 'well-exposed' | 'overexposed' | 'mixed/HDR'",
-    "noise_level": "'clean' | 'slight grain' | 'noisy' | 'very noisy'",
     "is_screenshot": false,
     "is_graphic": false,
     "orientation": "'landscape' | 'portrait' | 'square'"
   },
 
   "quality_score": 0.0,
-
-  "texture_material": ["dominant textures and materials visible — e.g., 'concrete', 'glass', 'silk', 'wood grain', 'skin', 'brushed metal', 'paper', 'leather', 'water/reflective', 'digital/flat'. Empty array if not notable."],
 
   "text_content": {
     "has_text": false,
@@ -93,14 +61,11 @@ const USER_PROMPT = `Analyze this image and return a JSON object with exactly th
 RULES:
 - Be literal and specific. "A person wearing a blue denim jacket" not "someone in casual wear."
 - For colors, extract actual hex values from what you see.
-- blur_score: 0.0 = tack sharp, 1.0 = unusable. Most decent photos are 0.1-0.3.
 - quality_score: holistic judgment of image quality considering sharpness, exposure, composition, noise, and whether the shot appears intentional vs accidental. 0.0 = accidental/unusable, 0.5 = average, 1.0 = professional quality.
 - Objects: 3-10 meaningful, searchable items.
-- People: one entry per visible person, max 6. If more than 6, describe the most prominent and set the total in count.
 - Tags: lowercase, singular when possible ('cat' not 'cats').
 - The description is the most important field. Make it detailed, specific, and distinguishing.
-- For screenshots, graphics, or non-photographic images, still fill all fields with sensible values (e.g., setting = 'not applicable', weather = 'not applicable').
-- energy_level: 0.0 = still/calm/static, 1.0 = dynamic/energetic/action.`
+- For screenshots, graphics, or non-photographic images, still fill all fields with sensible values (e.g., setting = 'not applicable').`
 
 export async function analyzeImage(imageBuffer: Buffer) {
   try {

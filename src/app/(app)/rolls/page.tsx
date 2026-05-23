@@ -25,9 +25,9 @@ export default async function RollsPage() {
       </div>
 
       {rolls.length === 0 ? (
-        <p className="text-lg">No rolls yet. Create your first roll to get started.</p>
+        <p className="text-lg text-primary-400">No rolls yet. Create your first roll to begin.</p>
       ) : (
-        <div className="flex flex-col">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-primary-100">
           {rolls.map((roll) => (
             <RollCard
               key={roll.id}

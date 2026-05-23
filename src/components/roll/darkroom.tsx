@@ -26,10 +26,17 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
   const hasNext = index < images.length - 1
 
   const goTo = useCallback((i: number) => {
-    setIndex(i)
-    setMetadata(null)
-    setMetaImageId(null)
-    setMetaFailed(false)
+    const update = () => {
+      setIndex(i)
+      setMetadata(null)
+      setMetaImageId(null)
+      setMetaFailed(false)
+    }
+    if ('startViewTransition' in document) {
+      document.startViewTransition(update)
+    } else {
+      update()
+    }
   }, [])
 
   const goPrev = useCallback(() => {
@@ -40,16 +47,24 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
     if (hasNext) goTo(index + 1)
   }, [hasNext, index, goTo])
 
+  const handleClose = useCallback(() => {
+    if ('startViewTransition' in document) {
+      document.startViewTransition(onClose)
+    } else {
+      onClose()
+    }
+  }, [onClose])
+
   // Keyboard navigation
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') handleClose()
       if (e.key === 'ArrowLeft') goPrev()
       if (e.key === 'ArrowRight') goNext()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [onClose, goPrev, goNext])
+  }, [handleClose, goPrev, goNext])
 
   // Prevent body scroll while overlay is open
   useEffect(() => {
@@ -83,7 +98,7 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center ${bg} transition-colors duration-200`}
-      onClick={onClose}
+      onClick={handleClose}
       role="dialog"
       aria-modal="true"
       aria-label="Image detail"
@@ -93,14 +108,14 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
         className="relative w-full h-full flex items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Main image — commands maximum viewport space at exact aspect ratio */}
+        {/* Main image — transition name matches grid cell so the morph works */}
         <Image
           src={src}
           alt={image.original_filename ?? ''}
           width={2000}
           height={2000}
           className="max-w-full max-h-full object-contain"
-          style={{ width: 'auto', height: 'auto', maxWidth: '100vw', maxHeight: '100vh' }}
+          style={{ width: 'auto', height: 'auto', maxWidth: '100vw', maxHeight: '100vh', viewTransitionName: `image-${image.id}` }}
           priority
         />
 
@@ -115,7 +130,7 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
 
         {/* Close — top-left */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className={`absolute top-4 left-4 text-sm px-3 py-1 animate-swiss ${textColor} hover:opacity-70`}
           aria-label="Close"
         >

@@ -56,6 +56,7 @@ export function ChatInterface({
     showAll,
     openDarkroom,
     handleFilterModify,
+    selectionIdlePrompt,
   } = state;
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -115,9 +116,10 @@ export function ChatInterface({
               initialImages={initialImages}
               resultImageIds={resultImageIds}
               selectedImageIds={selectedImageIds}
-              onImageClick={toggleSelected}
+              onImageClick={(id, isModified) =>
+                isModified ? toggleSelected(id) : openDarkroom(id)
+              }
               onImagesChange={(imgs) => setLiveImages(imgs)}
-              onFullscreen={openDarkroom}
             />
           </>
         )}
@@ -128,8 +130,15 @@ export function ChatInterface({
         <div className="w-full max-w-2xl px-4 pb-5 flex flex-col gap-2 pointer-events-auto">
 
 
+          {/* Idle selection nudge — surfaces after 2+ images selected for >3s */}
+          {selectionIdlePrompt && !hasActiveFilter && (
+            <p className="text-sm text-primary-400 truncate px-1 animate-bloom">
+              Find images similar to these — or type to refine.
+            </p>
+          )}
+
           {/* Follow-up ghost line */}
-          {followups.length > 0 && !hasActiveFilter && (
+          {followups.length > 0 && !hasActiveFilter && !selectionIdlePrompt && (
             <p className="text-sm text-primary-400 truncate px-1">
               {followups[0]}
             </p>
@@ -154,6 +163,7 @@ export function ChatInterface({
                   selectedIds={selectedImageIds}
                   imageMap={imageMap}
                   onDeselect={deselect}
+                  onClear={showAll}
                 />
               </div>
             )}
@@ -295,10 +305,12 @@ function SelectionStrip({
   selectedIds,
   imageMap,
   onDeselect,
+  onClear,
 }: {
   selectedIds: string[];
   imageMap: Map<string, ImageRecord>;
   onDeselect: (id: string) => void;
+  onClear: () => void;
 }) {
   return (
     <div className="flex items-center gap-2 overflow-x-auto mb-1.5 animate-bloom">
@@ -328,6 +340,13 @@ function SelectionStrip({
       <span className="text-sm tabular-nums text-primary-400 shrink-0">
         {selectedIds.length} selected
       </span>
+      <button
+        onClick={onClear}
+        className="text-sm text-primary-400 animate-swiss hover:text-primary-900 shrink-0"
+        aria-label="Clear selection"
+      >
+        Clear
+      </button>
     </div>
   );
 }

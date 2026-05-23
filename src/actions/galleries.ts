@@ -280,15 +280,22 @@ const PUBLIC_IMAGE_FIELDS = 'id, storage_key, original_filename, width, height, 
 export async function getPublicGallery(slug: string): Promise<GalleryWithImages> {
   const supabase = createAnonClient()
 
-  // Single join query: gallery → gallery_images → images (ordered by position).
-  // Avoids three sequential round-trips and the manual sort below.
-  type NestedImage = { position: number; images: Record<string, unknown> | null }
-  type GalleryWithNested = Record<string, unknown> & { gallery_images: NestedImage[] }
+  // Single join: gallery → roll (name) → gallery_images → images → image_metadata (subject).
+  type NestedMetadata = { metadata: Record<string, unknown> | null } | null
+  type NestedImage = {
+    position: number
+    images: (Record<string, unknown> & { image_metadata: NestedMetadata }) | null
+  }
+  type NestedRoll = { name: string } | null
+  type GalleryWithNested = Record<string, unknown> & {
+    gallery_images: NestedImage[]
+    rolls: NestedRoll
+  }
   type QueryResult = { data: GalleryWithNested | null; error: { message: string } | null }
 
   const { data, error } = (await supabase
     .from('galleries')
-    .select(`*, gallery_images(position, images(${PUBLIC_IMAGE_FIELDS}))`)
+    .select(`*, rolls(name), gallery_images(position, images(${PUBLIC_IMAGE_FIELDS}, image_metadata(metadata)))`)
     .eq('slug', slug)
     .eq('is_public', true)
     .order('position', { referencedTable: 'gallery_images', ascending: true })
@@ -296,12 +303,17 @@ export async function getPublicGallery(slug: string): Promise<GalleryWithImages>
 
   if (error || !data) throw new Error('Gallery not found')
 
-  const { gallery_images, ...galleryFields } = data
+  const { gallery_images, rolls, ...galleryFields } = data
   const images = gallery_images
-    .map((r) => r.images)
-    .filter((img): img is Record<string, unknown> => img !== null) as unknown as Image[]
+    .map((r) => {
+      if (!r.images) return null
+      const { image_metadata, ...imageFields } = r.images
+      const subject = (image_metadata?.metadata?.subject as string | null | undefined) ?? null
+      return { ...imageFields, subject } as Image & { subject: string | null }
+    })
+    .filter((img): img is Image & { subject: string | null } => img !== null)
 
-  return { ...(galleryFields as Gallery), images }
+  return { ...(galleryFields as Gallery), images, roll_name: rolls?.name ?? null }
 }
 
 const GALLERY_THUMBNAIL_LIMIT = 4

@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { getImageUrl, getLqipUrl } from "@/lib/imagekit/url";
-import { deleteImages } from "@/actions/images";
 import type { Image as ImageRecord } from "@/types/domain";
 import { Masonry, type MasonryRenderProps } from "@/components/ui/masonry";
 import { useState } from "react";
@@ -14,42 +13,37 @@ type Props = {
   initialImages: ImageRecord[];
   resultImageIds?: string[] | null;
   selectedImageIds?: string[];
-  onImageClick?: (id: string) => void;
+  onImageClick?: (id: string, isModified: boolean) => void;
   onImagesChange?: (images: ImageRecord[]) => void;
-  onFullscreen?: (imageId: string, contextImages: ImageRecord[]) => void;
 };
 
 type CellData = {
   image: ImageRecord;
   isSelected: boolean;
-  onImageClick?: (id: string) => void;
-  onFullscreen?: () => void;
-  onDelete?: (id: string) => void;
+  onImageClick?: (id: string, isModified: boolean) => void;
 };
 
 function ImageCell({ data }: MasonryRenderProps<CellData>) {
-  const { image, isSelected, onImageClick, onFullscreen, onDelete } = data;
+  const { image, isSelected, onImageClick } = data;
   const src = getImageUrl(image.storage_key, { width: 400, quality: 80 });
   const lqip = getLqipUrl(image.storage_key);
 
   const w = image.width ?? 400;
   const h = image.height ?? 300;
 
-  const ringClass = isSelected ? "ring-2 ring-semantic-info ring-offset-2" : "";
-
   return (
     <div
       role="button"
       tabIndex={0}
       aria-pressed={isSelected}
-      onClick={() => onImageClick?.(image.id)}
+      onClick={(e) => onImageClick?.(image.id, e.metaKey || e.ctrlKey || e.shiftKey)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onImageClick?.(image.id);
+          onImageClick?.(image.id, false);
         }
       }}
-      className={`group relative rounded-none focus:outline-none focus:ring-2 focus:ring-primary-900 cursor-pointer ${ringClass}`}
+      className="group relative rounded-none focus:outline-none focus:ring-2 focus:ring-primary-900 cursor-pointer"
     >
       <Image
         src={src}
@@ -60,30 +54,17 @@ function ImageCell({ data }: MasonryRenderProps<CellData>) {
         className="w-full h-auto rounded-none block"
         placeholder="blur"
         blurDataURL={lqip}
+        // Named so it can morph into the darkroom via View Transitions.
+        style={{ viewTransitionName: `image-${image.id}` }}
       />
 
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 animate-bloom flex gap-1">
-        {onFullscreen && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onFullscreen(); }}
-            className="flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-black/60 animate-swiss"
-            aria-label="Open fullscreen"
-            tabIndex={-1}
-          >
-            <span className="text-white text-base leading-none">⤢</span>
-          </button>
-        )}
-        {onDelete && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(image.id); }}
-            className="flex items-center justify-center w-7 h-7 bg-black/40 hover:bg-semantic-alert/80 animate-swiss"
-            aria-label="Delete image"
-            tabIndex={-1}
-          >
-            <span className="text-white text-base leading-none">×</span>
-          </button>
-        )}
-      </div>
+      {/* Selection dot — top-left, replaces hover chrome */}
+      <div
+        className={`absolute top-2 left-2 w-3 h-3 rounded-full border-2 border-white transition-opacity ${
+          isSelected ? "opacity-100 bg-semantic-info" : "opacity-0 group-hover:opacity-60 bg-transparent"
+        }`}
+        aria-hidden="true"
+      />
     </div>
   );
 }
@@ -95,7 +76,6 @@ export function RollImageGrid({
   selectedImageIds = [],
   onImageClick,
   onImagesChange,
-  onFullscreen,
 }: Props) {
   const [images, setImages] = useState<ImageRecord[]>(initialImages);
   const bufferRef = useRef<ImageRecord[]>([]);
@@ -176,18 +156,6 @@ export function RollImageGrid({
   const resultSet = resultImageIds !== null ? new Set(resultImageIds) : null;
   const selectedSet = new Set(selectedImageIds);
 
-  // Context-aware navigation: Darkroom navigates within the active result set (or all images).
-  const contextImages =
-    resultSet !== null ? images.filter((img) => resultSet.has(img.id)) : images;
-
-  function handleDelete(id: string) {
-    // Optimistic: remove from local state immediately
-    setImages((prev) => prev.filter((img) => img.id !== id));
-    deleteImages([id]).catch(() => {
-      console.error("Failed to delete image", id);
-    });
-  }
-
   // T-04: reflow on filter rather than dim non-matching cells.
   // Dense reflow (default): non-matching cells are dropped from the grid so
   // masonic repacks remaining cells into the available columns. Selected cells
@@ -202,10 +170,6 @@ export function RollImageGrid({
     image,
     isSelected: selectedSet.has(image.id),
     onImageClick,
-    onFullscreen: onFullscreen
-      ? () => onFullscreen(image.id, contextImages)
-      : undefined,
-    onDelete: handleDelete,
   }));
 
   return (
