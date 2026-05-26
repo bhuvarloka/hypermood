@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback, useState, useOptimistic, useTransition } from 'react'
+import { useEffect, useCallback, useState, useOptimistic, useTransition, useRef } from 'react'
 import Image from 'next/image'
 import {
   listGalleriesWithImageData,
@@ -292,30 +292,50 @@ function GalleryDetail({
     })
   }, [gallery.id, optimisticImages, setOptimisticImages, onImagesChanged])
 
-  // Drag-to-reorder state
+  // Pointer-event drag-to-reorder — no native ghost image, works on touch.
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const dragRef = useRef<{ startX: number; startY: number; moved: boolean }>({ startX: 0, startY: 0, moved: false })
 
-  const handleDragStart = useCallback((i: number) => setDragIndex(i), [])
-  const handleDragOver = useCallback((e: React.DragEvent, i: number) => {
-    e.preventDefault()
-    setDragOverIndex(i)
-  }, [])
-
-  const handleDrop = useCallback((dropIndex: number) => {
-    if (dragIndex === null || dragIndex === dropIndex) {
-      setDragIndex(null); setDragOverIndex(null); return
-    }
+  const commitReorder = useCallback((from: number, to: number) => {
+    if (from === to) return
     const next = [...optimisticImages]
-    const [moved] = next.splice(dragIndex, 1)
-    next.splice(dropIndex, 0, moved)
-    setDragIndex(null); setDragOverIndex(null)
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
     startSave(async () => {
       setOptimisticImages(next)
       await reorderGalleryImages(gallery.id, next.map((img) => img.id))
       onImagesChanged(gallery.id, next)
     })
-  }, [dragIndex, optimisticImages, setOptimisticImages, gallery.id, onImagesChanged])
+  }, [optimisticImages, setOptimisticImages, gallery.id, onImagesChanged])
+
+  const handlePointerDown = useCallback((e: React.PointerEvent, i: number) => {
+    // only primary pointer (mouse left / touch)
+    if (e.button !== 0 && e.pointerType === 'mouse') return
+    dragRef.current = { startX: e.clientX, startY: e.clientY, moved: false }
+    setDragIndex(i)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }, [])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const d = dragRef.current
+    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 4) return
+    d.moved = true
+    // find the cell under the pointer (release capture temporarily to hit-test)
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    const cell = el?.closest<HTMLElement>('[data-sort-index]')
+    if (cell) setDragOverIndex(Number(cell.dataset.sortIndex))
+  }, [])
+
+  const handlePointerUp = useCallback((e: React.PointerEvent, i: number) => {
+    ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    if (dragRef.current.moved && dragIndex !== null && dragOverIndex !== null) {
+      commitReorder(dragIndex, dragOverIndex)
+    }
+    setDragIndex(null)
+    setDragOverIndex(null)
+    dragRef.current.moved = false
+  }, [dragIndex, dragOverIndex, commitReorder])
 
   return (
     <div className="flex flex-col gap-6 px-6 pb-8">
@@ -393,29 +413,29 @@ function GalleryDetail({
         )}
       </div>
 
-      {/* Image grid — drag-to-reorder, × to remove */}
+      {/* Image grid — pointer-event drag-to-reorder, × to remove */}
       {optimisticImages.length > 0 ? (
         <div className="grid grid-cols-3 gap-1">
           {optimisticImages.map((img, i) => (
             <div
               key={img.id}
-              draggable
-              onDragStart={() => handleDragStart(i)}
-              onDragOver={(e) => handleDragOver(e, i)}
-              onDrop={() => handleDrop(i)}
-              onDragEnd={() => { setDragIndex(null); setDragOverIndex(null) }}
-              className={`relative group cursor-grab active:cursor-grabbing ${
-                dragOverIndex === i && dragIndex !== i ? 'ring-2 ring-primary-900 ring-inset' : ''
-              }`}
+              data-sort-index={i}
+              onPointerDown={(e) => handlePointerDown(e, i)}
+              onPointerMove={dragIndex !== null ? handlePointerMove : undefined}
+              onPointerUp={(e) => handlePointerUp(e, i)}
+              className={`relative group touch-none select-none cursor-grab active:cursor-grabbing ${
+                dragIndex === i ? 'opacity-40' : ''
+              } ${dragOverIndex === i && dragIndex !== i ? 'ring-2 ring-primary-900 ring-inset' : ''}`}
             >
               <Image
                 src={getImageUrl(img.storage_key, { width: 120, height: 120, quality: 70 })}
                 alt={img.original_filename ?? ''}
                 width={120}
                 height={120}
-                className="w-full aspect-square object-cover"
+                className="w-full aspect-square object-cover pointer-events-none"
               />
               <button
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => removeImage(img.id)}
                 className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-primary-950/70 text-white text-xs opacity-0 group-hover:opacity-100 animate-swiss"
                 aria-label="Remove image"

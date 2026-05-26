@@ -54,7 +54,7 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 | 24 | T-24 | Motion language: micro / reveal / navigate | done |
 | 25 | T-25 | OTP login dark→light view transition | done |
 | 26 | T-26 | Editorial copy + `pluralize` helper | done |
-| 27 | T-27 | Replace HTML5 DnD in gallery drawer | todo |
+| 27 | T-27 | Replace HTML5 DnD in gallery drawer | done |
 | 28 | T-28 | History drawer / input bar conflict | todo |
 | 29 | T-30 | Accessibility pass | todo |
 | 30 | T-31 | Mobile degradations | todo |
@@ -676,7 +676,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-27
 - **Order:** 27
-- **Status:** todo
+- **Status:** done
 - **Effort:** S
 - **Visibility:** UV
 - **Depends on:** —
@@ -684,9 +684,9 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Pick `@dnd-kit/sortable` (best ergonomics) or hand-roll a pointer-event reorder (~150 lines).
-- [ ] Replace the HTML5 DnD at [gallery-drawer.tsx:294-313](../src/components/gallery/gallery-drawer.tsx#L294-L313).
-- [ ] Smooth touch behaviour; no native ghost image.
+- [x] Hand-rolled pointer-event reorder (~50 lines). No library dependency.
+- [x] Replace the HTML5 DnD at [gallery-drawer.tsx](../src/components/gallery/gallery-drawer.tsx). `draggable` / `onDragStart` / `onDragOver` / `onDrop` removed.
+- [x] Smooth touch behaviour; no native ghost image. `touch-none select-none` on cells; `pointer-events-none` on the image so hit-testing reaches the cell. Dragged cell dims to 40% opacity as a rubber-band indicator.
 
 **Done when:** drag-to-reorder works on touch; no native ghost image; smooth rubber-band feedback.
 
