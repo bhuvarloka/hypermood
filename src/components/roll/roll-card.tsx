@@ -75,7 +75,7 @@ export function RollCard({ roll, storageKeys }: Props) {
         ) : (
           /* Empty roll — single reference tone */
           <div className="absolute inset-0 flex items-end p-4">
-            <span className="text-sm text-primary-300">No images yet</span>
+            <span className="text-sm text-primary-500">No images yet</span>
           </div>
         )}
       </div>

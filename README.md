@@ -19,11 +19,16 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 ```bash
 pnpm exec playwright install chromium   # one-time, downloads the browser
 cp .env.test.local.example .env.test.local
-# Fill in: TEST_USER_EMAIL, TEST_ROLL_ID, TEST_PUBLIC_GALLERY_SLUG,
-# plus the same NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY from .env.local.
-# Auth uses the service-role key to mint a session (no OTP needed).
+# Fill in only: TEST_USER_EMAIL, TEST_ROLL_ID, TEST_PUBLIC_GALLERY_SLUG.
+# No secrets go in .env.test.local — Supabase URL + keys are read from .env.local.
+# Auth uses the service-role key (from .env.local) to mint a session (no OTP needed).
 pnpm test:e2e
 ```
+
+> ⚠️ **`test-results/` and `tests/e2e/.auth/user.json` contain a real Supabase
+> session** (live access + refresh tokens for the test account). They are
+> gitignored — never zip, attach, or share them. The `setup` project runs with
+> tracing off so the session never lands in a trace.zip.
 
 ## Learn More
 

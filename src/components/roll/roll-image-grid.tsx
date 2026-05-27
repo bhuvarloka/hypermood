@@ -23,6 +23,44 @@ type CellData = {
   onImageClick?: (id: string, isModified: boolean) => void;
 };
 
+// Move keyboard focus to the cell nearest to `from` in the requested direction.
+// masonic packs columns, so DOM order isn't visual row order — we resolve the
+// target geometrically from the rendered cells' bounding boxes.
+function focusAdjacentCell(from: HTMLElement, key: string) {
+  const grid = from.closest("[data-masonry-grid]");
+  if (!grid) return;
+  const cells = Array.from(grid.querySelectorAll<HTMLElement>("[data-cell]"));
+  const r = from.getBoundingClientRect();
+  const fromX = r.left + r.width / 2;
+  const fromY = r.top + r.height / 2;
+
+  let best: HTMLElement | null = null;
+  let bestScore = Infinity;
+  for (const cell of cells) {
+    if (cell === from) continue;
+    const c = cell.getBoundingClientRect();
+    const cx = c.left + c.width / 2;
+    const cy = c.top + c.height / 2;
+    const dx = cx - fromX;
+    const dy = cy - fromY;
+    const inDir =
+      (key === "ArrowRight" && dx > 1) ||
+      (key === "ArrowLeft" && dx < -1) ||
+      (key === "ArrowDown" && dy > 1) ||
+      (key === "ArrowUp" && dy < -1);
+    if (!inDir) continue;
+    // Primary axis distance dominates; perpendicular drift is a tiebreaker.
+    const along = key === "ArrowLeft" || key === "ArrowRight" ? Math.abs(dx) : Math.abs(dy);
+    const across = key === "ArrowLeft" || key === "ArrowRight" ? Math.abs(dy) : Math.abs(dx);
+    const score = along + across * 2;
+    if (score < bestScore) {
+      bestScore = score;
+      best = cell;
+    }
+  }
+  best?.focus();
+}
+
 function ImageCell({ data }: MasonryRenderProps<CellData>) {
   const { image, isSelected, onImageClick } = data;
   const src = getImageUrl(image.storage_key, { width: 400, quality: 80 });
@@ -33,6 +71,7 @@ function ImageCell({ data }: MasonryRenderProps<CellData>) {
 
   return (
     <div
+      data-cell
       role="button"
       tabIndex={0}
       aria-pressed={isSelected}
@@ -40,7 +79,11 @@ function ImageCell({ data }: MasonryRenderProps<CellData>) {
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onImageClick?.(image.id, false);
+          // Cmd/Ctrl/Shift+Enter selects; plain Enter/Space opens.
+          onImageClick?.(image.id, e.metaKey || e.ctrlKey || e.shiftKey);
+        } else if (e.key.startsWith("Arrow")) {
+          e.preventDefault();
+          focusAdjacentCell(e.currentTarget, e.key);
         }
       }}
       className="group relative rounded-none focus:outline-none focus:ring-2 focus:ring-primary-900 cursor-pointer"
@@ -146,7 +189,7 @@ export function RollImageGrid({
   if (images.length === 0) {
     return (
       <div className="flex items-center justify-center flex-1 py-20">
-        <p className="text-2xl font-medium text-primary-200">
+        <p className="text-2xl font-medium text-primary-500">
           No images yet. Drag files here to index.
         </p>
       </div>
@@ -172,19 +215,25 @@ export function RollImageGrid({
     onImageClick,
   }));
 
+  // Re-key on the result set so each new filter result replays the `reveal`
+  // arrival gesture (T-02/T-24); null result = the full grid, one shared key.
+  const revealKey = resultImageIds === null ? "all" : resultImageIds.join(",");
+
   return (
-    <Masonry
-      items={cellItems}
-      getKey={(item) => item?.image?.id ?? ""}
-      getAspectRatio={(item) => {
-        const w = item?.image?.width ?? 1;
-        const h = item?.image?.height ?? 1;
-        return w / h;
-      }}
-      renderItem={ImageCell}
-      columnWidth={240}
-      gap={4}
-      className="p-4"
-    />
+    <div key={revealKey} className="animate-reveal">
+      <Masonry
+        items={cellItems}
+        getKey={(item) => item?.image?.id ?? ""}
+        getAspectRatio={(item) => {
+          const w = item?.image?.width ?? 1;
+          const h = item?.image?.height ?? 1;
+          return w / h;
+        }}
+        renderItem={ImageCell}
+        columnWidth={240}
+        gap={4}
+        className="p-4"
+      />
+    </div>
   );
 }

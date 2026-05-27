@@ -87,7 +87,7 @@ export function PublicGalleryView({ gallery }: Props) {
       <main className={mode === 'stage' ? 'flex-1 overflow-hidden' : 'flex-1'}>
         {gallery.images.length === 0 ? (
           <div className="flex items-center justify-center py-32">
-            <p className="text-2xl font-medium text-primary-200">No images in this gallery.</p>
+            <p className="text-2xl font-medium text-primary-500">No images in this gallery.</p>
           </div>
         ) : mode === 'timeline' ? (
           <TimelineStrip images={gallery.images} />
@@ -129,7 +129,7 @@ function ModeButton({ active, onClick, label, children }: { active: boolean; onC
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      className={`p-2 animate-swiss hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-900 ${active ? 'text-primary-900' : 'text-primary-200'}`}
+      className={`p-2 animate-swiss hover:bg-primary-50 focus:outline-none focus:ring-2 focus:ring-primary-900 ${active ? 'text-primary-900' : 'text-primary-400'}`}
     >
       {children}
     </button>
@@ -228,8 +228,7 @@ function BookGrid({ images }: { images: GalleryImageRecord[] }) {
 function StageView({ images }: { images: GalleryImageRecord[] }) {
   return (
     <div
-      className="h-[calc(100vh-var(--header-h,80px))] overflow-y-scroll"
-      style={{ scrollSnapType: 'y mandatory' }}
+      className="stage-snap h-[calc(100vh-var(--header-h,80px))] overflow-y-scroll"
     >
       {images.map((image, i) => (
         <StageCell key={image.id} image={image} index={i} />
@@ -282,8 +281,8 @@ function TimelineStrip({ images }: { images: GalleryImageRecord[] }) {
     <>
       {/* Large screens: horizontal scroll with baseline anchor */}
       <div
-        className="hidden md:flex flex-row overflow-x-auto items-end gap-12 md:gap-16 px-16 py-20 min-h-[80vh]"
-        style={{ WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}
+        className="smooth-scroll hidden md:flex flex-row overflow-x-auto items-end gap-12 md:gap-16 px-16 py-20 min-h-[80vh]"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {images.map((image, i) => (
           <TimelineCell key={image.id} image={image} index={i} />

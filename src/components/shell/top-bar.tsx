@@ -83,7 +83,7 @@ export function TopBar({ rolls, rollThumbnails, userEmail }: Props) {
               role="menu"
               className="absolute top-10 left-0 z-40 min-w-56 bg-white rounded-xl py-2 animate-bloom shadow-[0_12px_32px_rgba(0,0,0,0.12)]"
             >
-              <div className="px-4 py-2 text-sm tracking-tight text-primary-200 truncate">
+              <div className="px-4 py-2 text-sm tracking-tight text-primary-500 truncate">
                 {userEmail}
               </div>
               <Link
@@ -151,7 +151,7 @@ export function TopBar({ rolls, rollThumbnails, userEmail }: Props) {
             className="flex items-center gap-2 px-3 py-1.5 text-sm text-primary-500 rounded-full bg-primary-50 animate-swiss hover:bg-primary-100 hover:text-primary-900"
           >
             <span>Jump to…</span>
-            <kbd className="text-sm tracking-tight tabular-nums text-primary-300">
+            <kbd className="text-sm tracking-tight tabular-nums text-primary-500">
               ⌘K
             </kbd>
           </button>

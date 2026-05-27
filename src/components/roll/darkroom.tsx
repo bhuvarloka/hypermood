@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { getImageUrl } from '@/lib/imagekit/url'
 import { getImageMetadata } from '@/actions/images'
@@ -72,6 +72,15 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
     return () => { document.body.style.overflow = '' }
   }, [])
 
+  // Focus management: move focus into the dialog on open, restore it to the
+  // triggering element on close so keyboard users aren't dropped at page top.
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    dialogRef.current?.focus()
+    return () => previouslyFocused?.focus?.()
+  }, [])
+
   // Fetch metadata on demand (triggered by bottom hover). Catches auth/network errors
   // so the panel degrades gracefully rather than throwing an unhandled rejection.
   const fetchMetadata = useCallback(async (imageId: string) => {
@@ -97,7 +106,9 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center ${bg} transition-colors duration-200`}
+      ref={dialogRef}
+      tabIndex={-1}
+      className={`fixed inset-0 z-50 flex items-center justify-center outline-none ${bg} transition-colors duration-200`}
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
@@ -162,7 +173,7 @@ export function Darkroom({ images, initialIndex, onClose }: Props) {
   )
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ---- Sub-components ---- //
 
 function EdgeHoverZone({
   side,
@@ -222,6 +233,13 @@ function BottomHoverPanel({
     setHovered(true)
     onEnter()
   }
+  // Keyboard path: a focusable trigger reveals the same panel hover surfaces.
+  const toggle = () => {
+    setHovered((v) => {
+      if (!v) onEnter()
+      return !v
+    })
+  }
 
   const capturedDate = image.captured_at
     ? new Date(image.captured_at).toLocaleDateString('en-US', {
@@ -239,6 +257,18 @@ function BottomHoverPanel({
       onMouseEnter={handleEnter}
       onMouseLeave={() => setHovered(false)}
     >
+      {/* Keyboard/screen-reader trigger for the metadata panel (hover is mouse-only). */}
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={hovered}
+        aria-label="Image details"
+        className={`absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-sm px-3 py-1 animate-swiss focus:outline-none focus:ring-2 focus:ring-current ${textColor} ${
+          hovered ? 'opacity-0 pointer-events-none' : 'opacity-0 focus:opacity-100'
+        }`}
+      >
+        Details
+      </button>
       {/* Conditional render so animate-bloom fires on every hover entry */}
       {hovered && (
         <div

@@ -80,11 +80,18 @@ export function CmdK({ open, onClose, rolls, rollThumbnails }: Props) {
   const activeRef = useRef(active)
   activeRef.current = active
 
+  // Restore focus to whatever was focused before the dialog opened (the
+  // "Open switcher" button or the element the ⌘K shortcut fired from).
+  const restoreFocusRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
-    if (!open) return
-    setQuery('')
-    setActive(0)
-    requestAnimationFrame(() => inputRef.current?.focus())
+    if (open) {
+      restoreFocusRef.current = document.activeElement as HTMLElement | null
+      setQuery('')
+      setActive(0)
+      requestAnimationFrame(() => inputRef.current?.focus())
+    } else {
+      restoreFocusRef.current?.focus?.()
+    }
   }, [open])
 
   useEffect(() => {
@@ -137,7 +144,7 @@ export function CmdK({ open, onClose, rolls, rollThumbnails }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4"
+      className="fixed inset-0 z-50 flex items-start justify-center sm:pt-[15vh] sm:px-4"
       role="dialog"
       aria-modal="true"
       aria-label="Switcher"
@@ -148,19 +155,31 @@ export function CmdK({ open, onClose, rolls, rollThumbnails }: Props) {
         onClick={onClose}
         className="absolute inset-0 bg-primary-950/30 cursor-default"
       />
-      <div className="relative w-full max-w-xl bg-white rounded-xl overflow-hidden animate-bloom shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
+      {/* Full-screen sheet on mobile; centered card on sm+. */}
+      <div className="relative w-full h-full sm:h-auto sm:max-w-xl bg-white sm:rounded-xl overflow-hidden animate-bloom shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Jump to roll or gallery…"
+          role="combobox"
           aria-label="Search rolls and galleries"
+          aria-expanded="true"
+          aria-controls="cmdk-listbox"
+          aria-autocomplete="list"
+          aria-activedescendant={activeItem ? `cmdk-opt-${activeItem.kind}-${activeItem.id}` : undefined}
           className="w-full px-5 py-4 text-lg outline-none border-b border-primary-100 placeholder:text-primary-200"
         />
-        <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-2">
+        <div
+          ref={listRef}
+          id="cmdk-listbox"
+          role="listbox"
+          aria-label="Rolls and galleries"
+          className="h-[calc(100%-3.75rem)] sm:h-auto sm:max-h-[50vh] overflow-y-auto py-2"
+        >
           {filtered.length === 0 ? (
-            <div className="px-5 py-6 text-base text-primary-200">No matches</div>
+            <div className="px-5 py-6 text-base text-primary-500">No matches</div>
           ) : (
             <>
               <Section
@@ -179,6 +198,13 @@ export function CmdK({ open, onClose, rolls, rollThumbnails }: Props) {
           )}
         </div>
       </div>
+
+      {/* Screen-reader-only running count of matches. */}
+      <div aria-live="polite" className="sr-only">
+        {galleries === null
+          ? 'Loading…'
+          : `${filtered.length} ${filtered.length === 1 ? 'result' : 'results'}`}
+      </div>
     </div>
   )
 }
@@ -196,27 +222,30 @@ function Section({
 }) {
   if (items.length === 0) return null
   return (
-    <div className="mb-1">
-      <div className="px-5 pt-2 pb-1 text-sm tracking-tight text-primary-200">
+    <div className="mb-1" role="group" aria-label={label}>
+      <div className="px-5 pt-2 pb-1 text-sm tracking-tight text-primary-500" aria-hidden="true">
         {label}
       </div>
       {items.map(({ it, idx }) => {
         const isActive = it.id === activeId
         return (
-          <button
+          <div
             key={`${it.kind}-${it.id}`}
+            id={`cmdk-opt-${it.kind}-${it.id}`}
+            role="option"
+            aria-selected={isActive}
             data-idx={idx}
             onClick={() => onSelect(it.href)}
-            className={`w-full flex items-center gap-4 px-5 py-2.5 text-left animate-swiss ${
+            className={`w-full flex items-center gap-4 px-5 py-2.5 text-left cursor-pointer animate-swiss ${
               isActive ? 'bg-primary-100' : 'hover:bg-primary-50'
             }`}
           >
             <ThumbMosaic storageKeys={it.thumbnails} size={36} />
             <div className="flex-1 min-w-0">
               <div className="text-base text-primary-900 truncate">{it.name}</div>
-              <div className="text-sm tabular-nums text-primary-200">{it.subtitle}</div>
+              <div className="text-sm tabular-nums text-primary-500">{it.subtitle}</div>
             </div>
-          </button>
+          </div>
         )
       })}
     </div>

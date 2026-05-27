@@ -85,7 +85,7 @@ function MasonryInner<T>({
   });
 
   return (
-    <div ref={containerRef} className={className}>
+    <div ref={containerRef} className={className} data-masonry-grid>
       {grid}
     </div>
   );

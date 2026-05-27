@@ -98,8 +98,8 @@ export function ChatInterface({
       <div className="flex-1 overflow-y-auto pb-48">
         {liveImageCount === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 select-none pointer-events-none">
-            <p className="text-4xl font-medium text-primary-200">{rollName}</p>
-            <p className="text-sm text-primary-400">
+            <p className="text-4xl font-medium text-primary-300">{rollName}</p>
+            <p className="text-sm text-primary-500">
               Drop images here to begin
             </p>
           </div>
@@ -129,7 +129,7 @@ export function ChatInterface({
 
       {/* ---- BOTTOM BAR ---- */}
       <div className="absolute bottom-0 inset-x-0 flex justify-center pointer-events-none">
-        <div className="w-full max-w-2xl px-4 pb-5 flex flex-col gap-2 pointer-events-auto">
+        <div className="w-full max-w-2xl px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] flex flex-col gap-2 pointer-events-auto">
 
 
           {/* Refine toggle — only when a result set is active */}

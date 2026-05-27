@@ -116,7 +116,7 @@ export function GalleryDrawer({ onClose, rollId, initialGalleryId }: Props) {
           )}
           <button
             onClick={onClose}
-            className="text-primary-200 animate-swiss hover:text-primary-900"
+            className="text-primary-500 animate-swiss hover:text-primary-900"
             aria-label="Close galleries"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -391,7 +391,7 @@ function GalleryDetail({
           className={`text-sm px-3 py-1 border animate-swiss ${
             gallery.is_public
               ? 'border-semantic-info text-semantic-info hover:bg-primary-50'
-              : 'border-primary-200 text-primary-200 hover:text-primary-900 hover:border-primary-900'
+              : 'border-primary-300 text-primary-500 hover:text-primary-900 hover:border-primary-900'
           }`}
         >
           {gallery.is_public ? 'public' : 'private'}

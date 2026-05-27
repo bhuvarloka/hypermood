@@ -106,7 +106,7 @@ test.describe('Cmd-K switcher', () => {
   test('clicking a roll in the switcher navigates to the command center', async ({ page }) => {
     await page.getByRole('button', { name: 'Open switcher' }).click()
     const rollLink = page.getByRole('dialog', { name: 'Switcher' })
-      .locator('button[data-idx]')
+      .getByRole('option')
       .first()
     if ((await rollLink.count()) === 0) {
       test.skip()
