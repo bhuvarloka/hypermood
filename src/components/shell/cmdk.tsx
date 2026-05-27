@@ -169,7 +169,7 @@ export function CmdK({ open, onClose, rolls, rollThumbnails }: Props) {
           aria-controls="cmdk-listbox"
           aria-autocomplete="list"
           aria-activedescendant={activeItem ? `cmdk-opt-${activeItem.kind}-${activeItem.id}` : undefined}
-          className="w-full px-5 py-4 text-lg outline-none border-b border-primary-100 placeholder:text-primary-200"
+          className="w-full px-5 py-4 text-lg outline-none border-b border-primary-100 placeholder:text-primary-500"
         />
         <div
           ref={listRef}
