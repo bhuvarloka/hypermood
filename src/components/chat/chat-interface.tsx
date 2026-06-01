@@ -15,15 +15,13 @@ import { RollImageGrid } from "@/components/roll/roll-image-grid";
 import { Darkroom } from "@/components/roll/darkroom";
 import { PreviewPanel } from "@/components/chat/preview-panel";
 import { getImageUrl } from "@/lib/imagekit/url";
+import { CopyLinkButton } from "@/components/ui/copy-link-button";
 import type {
   ChatMessageWithResults,
   Image as ImageRecord,
 } from "@/types/domain";
 
-import {
-  GALLERY_INTENT_RE,
-  derivePreviewImages,
-} from "@/components/chat/chat-interface.logic";
+import { derivePreviewImages } from "@/components/chat/chat-interface.logic";
 
 const UNIVERSAL_SUGGESTIONS = [
   "Show me the best shots",
@@ -163,11 +161,6 @@ export function ChatInterface({
     const text = input.trim();
     if (!text || sending) return;
     setInput("");
-
-    if (GALLERY_INTENT_RE.test(text)) {
-      window.dispatchEvent(new CustomEvent("hypermood:open-galleries"));
-      return;
-    }
 
     const refIds = selectedImageIds.length > 0 ? selectedImageIds : undefined;
     setSelectedImageIds([]);
@@ -449,7 +442,9 @@ export function ChatInterface({
                 </>
               ) : (
                 <span className="text-sm tabular-nums text-primary-400">
-                  {liveImageCount > 0 ? `${liveImageCount} ${liveImageCount === 1 ? 'image' : 'images'}` : ""}
+                  {liveImageCount > 0
+                    ? `${liveImageCount} ${liveImageCount === 1 ? "image" : "images"}`
+                    : ""}
                 </span>
               )}
             </div>
@@ -546,8 +541,8 @@ function HistoryBubble({ message }: { message: MessageWithFollowups }) {
         }`}
       >
         {message.galleryLink ? (
-          <p>
-            Gallery saved →{" "}
+          <p className="flex items-center gap-2 flex-wrap">
+            <span>Gallery saved →</span>
             <a
               href={message.galleryLink}
               className="text-semantic-info underline animate-swiss hover:opacity-70"
@@ -556,6 +551,7 @@ function HistoryBubble({ message }: { message: MessageWithFollowups }) {
             >
               {message.galleryLink}
             </a>
+            <CopyLinkButton url={message.galleryLink} ariaLabel="Copy public link" />
           </p>
         ) : (
           <p>{message.content}</p>

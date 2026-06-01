@@ -9,6 +9,24 @@ import {
   useContainerPosition,
 } from "masonic";
 
+const ensureResizeObserver = () => {
+  if (typeof globalThis.ResizeObserver !== "undefined") {
+    return;
+  }
+
+  class FallbackResizeObserver implements ResizeObserver {
+    constructor(_callback: ResizeObserverCallback) {}
+    observe(_target: Element) {}
+    unobserve(_target: Element) {}
+    disconnect() {}
+  }
+
+  // Fallback for SSR or runtimes without ResizeObserver support.
+  globalThis.ResizeObserver = FallbackResizeObserver;
+};
+
+ensureResizeObserver();
+
 export type MasonryRenderProps<T> = {
   index: number;
   width: number;
@@ -42,7 +60,7 @@ export function Masonry<T>({
 
   const positioner = usePositioner(
     { width, columnWidth, columnGutter: gap, maxColumnCount },
-    [width, gap],
+    [width, gap, items.length],
   );
 
   const resizeObserver = useResizeObserver(positioner);
@@ -51,8 +69,10 @@ export function Masonry<T>({
   const columnW = positioner.columnWidth || columnWidth;
   const avgHeight =
     items.length > 0
-      ? items.reduce((sum, item) => sum + columnW / (_getAspectRatio(item) || 1), 0) /
-        items.length
+      ? items.reduce(
+          (sum, item) => sum + columnW / (_getAspectRatio(item) || 1),
+          0,
+        ) / items.length
       : 300;
 
   const grid = useMasonry({

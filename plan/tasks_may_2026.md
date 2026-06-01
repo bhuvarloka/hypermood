@@ -16,7 +16,7 @@
 The critique was written before recent commits. The following claims drifted from reality and have been corrected in the tasks below — **flagged inline** as `Drift:`:
 
 - **T-01 (rail → top-bar + cmd-k):** the critique describes the rail as still in place. Reality: `src/components/roll/rail.tsx` has been deleted; `src/components/shell/top-bar.tsx` (203 lines) and `src/components/shell/cmdk.tsx` (224 lines) exist; `src/app/(app)/layout.tsx` renders `TopBar`. Scope reduced to **verification + polish + e2e green**, not "build from scratch".
-- **T-21 (stream the app-shell layout):** critique says `await listRollsCached()` + `await getRollThumbnails()` run sequentially. Confirmed still true at [src/app/(app)/layout.tsx:13-14](../src/app/(app)/layout.tsx#L13-L14). Task stands.
+- **T-21 (stream the app-shell layout):** critique says `await listRollsCached()` + `await getRollThumbnails()` run sequentially. Confirmed still true at [src/app/(app)/layout.tsx:13-14](<../src/app/(app)/layout.tsx#L13-L14>). Task stands.
 - **T-32 (e2e runnable):** new tests in `tests/e2e/rolls.e2e.ts` and `tests/e2e/gallery-drawer.e2e.ts` already reference top-bar / cmd-k / settings popover. Promoted to **Order 1** since it blocks verification of T-01.
 - All other critique claims about file paths, line numbers, and code patterns were spot-checked and hold.
 
@@ -26,41 +26,41 @@ No fabricated APIs or files detected. Library recommendations (`masonic`, `@dnd-
 
 ## Execution order at a glance
 
-| Order | ID | Title | Status |
-| --- | --- | --- | --- |
-| 1 | T-32 | Make e2e tests runnable | done |
-| 2 | T-01 | Verify top-bar + cmd-k (already built) | done |
-| 3 | T-08 | Drop the mono typeface; reform typography | done |
-| 4 | T-03 | Shared masonry (`masonic`) used in three places | done |
-| 5 | T-04 | Reflow on filter, don't dim | done |
-| 6 | T-02 | Strip and rebuild the chat input | todo |
-| 7 | T-06 | Galleries discoverability + copy-link flow | todo |
-| 8 | T-14 | Reconcile selection model (click opens, mod-click selects) | todo |
-| 9 | T-07 | Rebuild rolls index as editorial gallery | todo |
-| 10 | T-05 | Redesign public gallery `timeline` mode | todo |
-| 11 | T-10 | View Transitions: roll → command-center → darkroom | todo |
-| 12 | T-09 | Cut vision indexing prompt to ~10 fields | todo |
-| 13 | T-18 | Drop base64 in Inngest; parallelize vision + embedding | todo |
-| 14 | T-11 | Cut chat-turn latency <500ms | todo |
-| 15 | T-12 | Replace fake stream-of-thought | todo |
-| 16 | T-17 | Postgres-backed embedding cache | todo |
-| 17 | T-15 | Filter chip behaviour (fresh translate + Refine) | todo |
-| 18 | T-16 | SQL RPC for metadata-only filter | todo |
-| 19 | T-20 | `result_image_ids` realtime drift fix | todo |
-| 20 | T-19 | Direct ImageKit upload | todo |
-| 21 | T-13 | `book` + `stage` gallery modes | todo |
-| 22 | T-21 | Stream app-shell layout | todo |
-| 23 | T-23 | Three radii; strip the rest | todo |
-| 24 | T-24 | Motion language: micro / reveal / navigate | todo |
-| 25 | T-25 | OTP login dark→light view transition | todo |
-| 26 | T-26 | Editorial copy + `pluralize` helper | todo |
-| 27 | T-27 | Replace HTML5 DnD in gallery drawer | todo |
-| 28 | T-28 | History drawer / input bar conflict | todo |
-| 29 | T-30 | Accessibility pass | todo |
-| 30 | T-31 | Mobile degradations | todo |
-| 31 | T-33 | E2E test auth — secrets hygiene + service-role exposure | todo |
-| — | T-22 | (folded into T-03) | n/a |
-| — | T-29 | Open-source VLM swap — watch only | watch |
+| Order | ID   | Title                                                      | Status |
+| ----- | ---- | ---------------------------------------------------------- | ------ |
+| 1     | T-32 | Make e2e tests runnable                                    | done   |
+| 2     | T-01 | Verify top-bar + cmd-k (already built)                     | done   |
+| 3     | T-08 | Drop the mono typeface; reform typography                  | done   |
+| 4     | T-03 | Shared masonry (`masonic`) used in three places            | done   |
+| 5     | T-04 | Reflow on filter, don't dim                                | done   |
+| 6     | T-02 | Strip and rebuild the chat input                           | todo   |
+| 7     | T-06 | Galleries discoverability + copy-link flow                 | done   |
+| 8     | T-14 | Reconcile selection model (click opens, mod-click selects) | todo   |
+| 9     | T-07 | Rebuild rolls index as editorial gallery                   | todo   |
+| 10    | T-05 | Redesign public gallery `timeline` mode                    | todo   |
+| 11    | T-10 | View Transitions: roll → command-center → darkroom         | todo   |
+| 12    | T-09 | Cut vision indexing prompt to ~10 fields                   | todo   |
+| 13    | T-18 | Drop base64 in Inngest; parallelize vision + embedding     | todo   |
+| 14    | T-11 | Cut chat-turn latency <500ms                               | todo   |
+| 15    | T-12 | Replace fake stream-of-thought                             | todo   |
+| 16    | T-17 | Postgres-backed embedding cache                            | todo   |
+| 17    | T-15 | Filter chip behaviour (fresh translate + Refine)           | todo   |
+| 18    | T-16 | SQL RPC for metadata-only filter                           | todo   |
+| 19    | T-20 | `result_image_ids` realtime drift fix                      | todo   |
+| 20    | T-19 | Direct ImageKit upload                                     | todo   |
+| 21    | T-13 | `book` + `stage` gallery modes                             | todo   |
+| 22    | T-21 | Stream app-shell layout                                    | todo   |
+| 23    | T-23 | Three radii; strip the rest                                | todo   |
+| 24    | T-24 | Motion language: micro / reveal / navigate                 | todo   |
+| 25    | T-25 | OTP login dark→light view transition                       | todo   |
+| 26    | T-26 | Editorial copy + `pluralize` helper                        | todo   |
+| 27    | T-27 | Replace HTML5 DnD in gallery drawer                        | todo   |
+| 28    | T-28 | History drawer / input bar conflict                        | todo   |
+| 29    | T-30 | Accessibility pass                                         | todo   |
+| 30    | T-31 | Mobile degradations                                        | todo   |
+| 31    | T-33 | E2E test auth — secrets hygiene + service-role exposure    | todo   |
+| —     | T-22 | (folded into T-03)                                         | n/a    |
+| —     | T-29 | Open-source VLM swap — watch only                          | watch  |
 
 ---
 
@@ -102,7 +102,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - **Effort:** S (verification + polish; original build was L)
 - **Visibility:** UV
 - **Depends on:** T-32
-- **Drift:** The critique describes building this from scratch. Reality: `src/components/roll/rail.tsx` has been removed; [top-bar.tsx](../src/components/shell/top-bar.tsx) and [cmdk.tsx](../src/components/shell/cmdk.tsx) exist and are wired into [layout.tsx](../src/app/(app)/layout.tsx). Remaining work is **verification + polish**, not rebuild.
+- **Drift:** The critique describes building this from scratch. Reality: `src/components/roll/rail.tsx` has been removed; [top-bar.tsx](../src/components/shell/top-bar.tsx) and [cmdk.tsx](../src/components/shell/cmdk.tsx) exist and are wired into [layout.tsx](<../src/app/(app)/layout.tsx>). Remaining work is **verification + polish**, not rebuild.
 - **Source:** [critique.md §1](../critique.md)
 
 **Sub-tasks**
@@ -136,8 +136,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks — Step 2: replace `font-mono` per bucket map** (see critique §8 for the table)
 
-- [x] [src/app/(auth)/login/page.tsx](../src/app/(auth)/login/page.tsx) — 6 usages. OTP boxes → `text-xl tabular-nums`; rest → `text-sm text-primary-200/400`.
-- [x] [src/app/(app)/rolls/page.tsx](../src/app/(app)/rolls/page.tsx) — 1 usage (Stat). Bucket 1: `text-sm tracking-tight tabular-nums text-primary-400`. Fix "1 rolls" pluralization here (see T-07 / T-26).
+- [x] [src/app/(auth)/login/page.tsx](<../src/app/(auth)/login/page.tsx>) — 6 usages. OTP boxes → `text-xl tabular-nums`; rest → `text-sm text-primary-200/400`.
+- [x] [src/app/(app)/rolls/page.tsx](<../src/app/(app)/rolls/page.tsx>) — 1 usage (Stat). Bucket 1: `text-sm tracking-tight tabular-nums text-primary-400`. Fix "1 rolls" pluralization here (see T-07 / T-26).
 - [x] [src/components/roll/roll-card.tsx](../src/components/roll/roll-card.tsx) — 4 usages. Count → bucket 1; green "indexed" pill loses colour and matches count (T-07 alignment).
 - [x] [src/components/roll/darkroom.tsx](../src/components/roll/darkroom.tsx) — 6 usages. Top-corner buttons → small ghost; `text-3xl font-mono` arrows → SVG glyph or `text-3xl font-light`; metadata panel → bucket 1 + `tabular-nums`.
 - [x] [src/components/roll/roll-image-grid.tsx](../src/components/roll/roll-image-grid.tsx) — 1 usage (empty state) → `text-2xl font-medium text-primary-200`.
@@ -213,7 +213,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 - **ID:** T-02
 - **Order:** 6
-- **Status:** todo
+- **Status:** done
 - **Effort:** L
 - **Visibility:** UV
 - **Depends on:** T-04 (filter chips move to the result surface)
@@ -249,13 +249,13 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 
 **Sub-tasks**
 
-- [ ] Galleries entry point lives prominently in the top-bar (verify T-01 already exposes it; if not, add).
-- [ ] Drop the hidden gallery-intent regex at [chat-interface.tsx:166-169](../src/components/chat/chat-interface.tsx#L166-L169).
-- [ ] "Save as Gallery" defaults to **public** in [preview-panel.tsx:179-267](../src/components/chat/preview-panel.tsx#L179-L267).
-- [ ] On save success, the assistant's "Gallery saved → /g/[slug]" message at [chat-interface.tsx:268-284](../src/components/chat/chat-interface.tsx#L268-L284) includes the copy button inline.
-- [ ] In the gallery list (drawer + page), each row gets a hover-revealed copy button.
-- [ ] Public/private becomes a one-tap toggle from the list, not the detail view.
-- [ ] **Fix from T-32 run:** `gallery-drawer.e2e.ts:96` fails because `getByRole('button', { name: /public|private/ })` strict-matches both the privacy toggle (`"public"`) and the new `aria-label="Copy public link"` copy button. When this task ships the list-level copy button, give the privacy toggle a more specific aria-label (e.g. `Make private` / `Make public`) or relax the test locator.
+- [x] Galleries entry point lives prominently in the top-bar (verify T-01 already exposes it; if not, add).
+- [x] Drop the hidden gallery-intent regex at [chat-interface.tsx:166-169](../src/components/chat/chat-interface.tsx#L166-L169).
+- [x] "Save as Gallery" defaults to **public** in [preview-panel.tsx:179-267](../src/components/chat/preview-panel.tsx#L179-L267).
+- [x] On save success, the assistant's "Gallery saved → /g/[slug]" message at [chat-interface.tsx:268-284](../src/components/chat/chat-interface.tsx#L268-L284) includes the copy button inline.
+- [x] In the gallery list (drawer + page), each row gets a hover-revealed copy button.
+- [x] Public/private becomes a one-tap toggle from the list, not the detail view.
+- [x] **Fix from T-32 run:** `gallery-drawer.e2e.ts:96` fails because `getByRole('button', { name: /public|private/ })` strict-matches both the privacy toggle (`"public"`) and the new `aria-label="Copy public link"` copy button. When this task ships the list-level copy button, give the privacy toggle a more specific aria-label (e.g. `Make private` / `Make public`) or relax the test locator.
 
 **Done when:** copy-link from a freshly-saved gallery is one click; Galleries reachable from the top-bar; gallery-intent regex removed; default privacy on new galleries is public.
 
@@ -291,7 +291,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - **Effort:** M
 - **Visibility:** UV
 - **Depends on:** T-03 (shared masonry)
-- **Verified:** "1 rolls" bug confirmed at [rolls/page.tsx:22](../src/app/(app)/rolls/page.tsx#L22) — the `Stat` component always renders `label` plural.
+- **Verified:** "1 rolls" bug confirmed at [rolls/page.tsx:22](<../src/app/(app)/rolls/page.tsx#L22>) — the `Stat` component always renders `label` plural.
 - **Source:** [critique.md §7](../critique.md)
 
 **Sub-tasks**
@@ -571,7 +571,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - **Effort:** S
 - **Visibility:** INT
 - **Depends on:** —
-- **Verified:** sequential awaits at [layout.tsx:13-14](../src/app/(app)/layout.tsx#L13-L14).
+- **Verified:** sequential awaits at [layout.tsx:13-14](<../src/app/(app)/layout.tsx#L13-L14>).
 - **Source:** [critique.md §21](../critique.md)
 
 **Sub-tasks**

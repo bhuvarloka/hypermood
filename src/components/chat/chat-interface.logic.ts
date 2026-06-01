@@ -1,14 +1,4 @@
-import type { Image as ImageRecord } from '@/types/domain'
-
-/**
- * Regular expression that matches user messages intending to open the gallery
- * manager drawer rather than query the image roll.
- *
- * Matches "gallery" (singular) or "galleries" (plural).
- * Note: `galleries?` would match "gallerie" or "galleries" but NOT "gallery".
- * The correct pattern is `gallery(?:s|\b)` to match both forms.
- */
-export const GALLERY_INTENT_RE = /\b(show|open|view|see|list)\b.*\bgaller(?:y|ies)\b/i
+import type { Image as ImageRecord } from "@/types/domain";
 
 /**
  * Derives the ordered list of images to show in PreviewPanel / the selection
@@ -22,26 +12,26 @@ export const GALLERY_INTENT_RE = /\b(show|open|view|see|list)\b.*\bgaller(?:y|ie
  * silently skipped rather than crashing.
  */
 export function derivePreviewImages(opts: {
-  selectedImageIds: string[]
-  resultImageIds: string[] | null
-  liveImages: ImageRecord[]
-  imageMap: Map<string, ImageRecord>
+  selectedImageIds: string[];
+  resultImageIds: string[] | null;
+  liveImages: ImageRecord[];
+  imageMap: Map<string, ImageRecord>;
 }): ImageRecord[] {
-  const { selectedImageIds, resultImageIds, liveImages, imageMap } = opts
+  const { selectedImageIds, resultImageIds, liveImages, imageMap } = opts;
 
   if (selectedImageIds.length > 0) {
     return selectedImageIds.flatMap((id) => {
-      const img = imageMap.get(id)
-      return img ? [img] : []
-    })
+      const img = imageMap.get(id);
+      return img ? [img] : [];
+    });
   }
 
   if (resultImageIds !== null && resultImageIds.length > 0) {
     return resultImageIds.flatMap((id) => {
-      const img = imageMap.get(id)
-      return img ? [img] : []
-    })
+      const img = imageMap.get(id);
+      return img ? [img] : [];
+    });
   }
 
-  return liveImages
+  return liveImages;
 }
