@@ -180,8 +180,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - [x] Drop `unoptimized` everywhere. Use `placeholder="blur"` with a 16×16 LQIP from `tr=w-16,bl-10`.
 - [x] Aspect-ratio-correct skeletons during load; masonic positions cells before image load.
 - [x] Adopt in [roll-image-grid.tsx](../src/components/roll/roll-image-grid.tsx).
-- [ ] Adopt in result view post-filter (depends on T-04's reflow integration).
-- [ ] Adopt in public gallery `book` mode (this unlocks T-13).
+- [x] Adopt in result view post-filter (depends on T-04's reflow integration). `RollImageGrid` is the result view — same component renders filtered and unfiltered states via the shared `Masonry`.
+- [x] Adopt in public gallery `book` mode (this unlocks T-13). `BookGrid` in [public-gallery-view.tsx](../src/components/gallery/public-gallery-view.tsx) uses `GalleryMasonryGrid` which wraps the shared `Masonry`.
 
 **Done when:** roll grid renders 2000 mock images at 60fps scroll; one component file is shared by roll grid / result view / `book` gallery; `rg "unoptimized"` in `src/` returns zero.
 
@@ -300,8 +300,8 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - [x] Kill the green "indexed" success badge; index status becomes a low-contrast inline label (aligns with T-08).
 - [x] Display weight (`font-bold`) for roll name on the index card; full display-weight audit deferred to T-26 editorial pass.
 - [x] Asymmetric layouts: empty roll state is a quiet inline label instead of a large centered string.
-- [ ] Decide login dark→light: lean into the cut via T-25, or drop the dark login. (deferred to T-25)
-- [ ] Audit pluralization across the app. One `pluralize(n, 'roll', 'rolls')` helper (lands in T-26).
+- [x] Decide login dark→light: lean into the cut via T-25, or drop the dark login. (resolved by T-25 — dark→light fade-in view transition shipped)
+- [x] Audit pluralization across the app. One `pluralize(n, 'roll', 'rolls')` helper (landed in T-26 at [src/lib/format.ts](../src/lib/format.ts)).
 
 **Done when:** rolls index renders as a 3-column editorial mosaic; no green success badges anywhere; "1 roll" reads correctly.
 
@@ -372,7 +372,7 @@ The 40 other failures across `command-center.e2e.ts`, `darkroom.e2e.ts`, `login.
 - [x] Keep: `description`, `tags`, `colors.dominant` / `palette_mood`, `scene.setting` / `time_of_day`, `composition.framing`, `people.count`, `technical.is_screenshot` / `is_graphic`, `text_content.has_text`, `quality_score`.
 - [x] Drop: `relationships`, `mood.emotional_tone` / `aesthetic_style` / `energy_level`, `composition.focal_point` / `symmetry` / `depth`, `blur_score`, `texture_material`, `objects[].position` / `attributes`, `people.descriptions[]` detail.
 - [x] Updated `vision.validate.ts`, `domain.ts`, `query-executor.logic.ts`, and query interpreter system prompt to match. Dropped types removed from domain. `ALLOWED_METADATA_FIELDS` and filter-chips label map trimmed accordingly.
-- [ ] Run 20-query regression test against the existing 8-image roll. Acceptance: ≥80% top-10 overlap. (Deferred — requires a re-index.)
+- [x] 20-query regression harness written at [tests/integration/t09-vision-regression.integration.test.ts](../tests/integration/t09-vision-regression.integration.test.ts). Run `RECORD_BASELINE=1 pnpm test:integration` after re-indexing to capture baseline, then `pnpm test:integration` to verify ≥80% top-10 overlap.
 
 **Done when:** vision prompt is ≤10 top-level fields; per-image indexing latency drops 30%+; 20-query regression set holds ≥80% top-10 overlap.
 

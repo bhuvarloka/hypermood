@@ -1,4 +1,4 @@
-please read ./plan/tasks_may_2026.md
+please read plan/tasks_june_2026.md
 
 ---
 

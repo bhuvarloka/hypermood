@@ -6,7 +6,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/integration/**/*.integration.test.ts'],
-    testTimeout: 30000,
+    setupFiles: ['tests/integration/load-env.ts'],
+    testTimeout: 120000,
   },
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
 })

@@ -3,9 +3,8 @@ import { embedText } from '@/lib/gemini/embedding'
 import type { QueryPlan } from '@/lib/gemini/query'
 import { IMAGES_TABLE_COLUMNS, buildClause } from './query-executor.logic'
 import type { Image } from '@/types/domain'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-// Server-process cache: same semantic_search string always produces the same vector,
-// so we avoid re-calling the embedding API when the user removes/adds filter chips.
 const embeddingCache = new Map<string, number[]>()
 
 export type QueryResult = {
@@ -13,8 +12,13 @@ export type QueryResult = {
   total: number
 }
 
-export async function executeQuery(plan: QueryPlan, rollId: string, precomputedEmbedding?: Promise<number[]> | null): Promise<QueryResult> {
-  const supabase = await createClient()
+export async function executeQuery(
+  plan: QueryPlan,
+  rollId: string,
+  precomputedEmbedding?: Promise<number[]> | null,
+  clientOverride?: SupabaseClient,
+): Promise<QueryResult> {
+  const supabase = clientOverride ?? (await createClient())
   const { filters, semantic_search, sort, limit } = plan
 
   const clauses = filters.map(buildClause).filter((c): c is string => c !== null)
